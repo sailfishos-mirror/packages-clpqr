@@ -603,11 +603,7 @@ nf(X,Norm) :-
 	!,
 	Norm = [v(1,[X^1])].
 nf(X,Norm) :-
-	number(X),
-	!,
-	nf_number(X,Norm).
-nf(X,Norm) :-
-	rational(X),
+	number(X),		% includes the rationals
 	!,
 	nf_number(X,Norm).
 %

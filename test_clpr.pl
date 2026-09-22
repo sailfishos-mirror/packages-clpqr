@@ -68,6 +68,7 @@ test_clpr :-
                 clpr_unify,
                 clpr_internals,
                 clpr_examples,
+                clpr_toplevel,
                 clpr_known_issues
               ]).
 
@@ -86,13 +87,10 @@ near(X, Y) :-
 
 :- begin_tests(clpr_syntax).
 
-test(conjunction) :-
-    {X > 1, X < 3, X =:= 2},
-    assertion(near(X, 2.0)).
-test(nested_conjunction) :-
-    {(X =:= 1, Y =:= 2)},
-    assertion(near(X,1.0)),
-    assertion(near(Y,2.0)).
+test(conjunction, true(near(X, 2.0))) :-
+    {X > 1, X < 3, X =:= 2}.
+test(nested_conjunction, [true(near(X,1.0)), true(near(Y,2.0))]) :-
+    {(X =:= 1, Y =:= 2)}.
 test(disjunction, all(Ok == [true,true])) :-
     {X =:= 1 ; X =:= 2},
     ( near(X,1.0) ; near(X,2.0) ),
@@ -101,72 +99,51 @@ test(less) :-
     {X < 3, X > 2, X =:= 2.5}.
 test(greater) :-
     {3 > X, 2 < X, X =:= 2.5}.
-test(leq) :-
-    {X =< 3, X >= 3},
-    assertion(near(X, 3.0)).
-test(leq_alt) :-
-    {<=(X, 3)}, {X >= 3},
-    assertion(near(X, 3.0)).
-test(eq_is) :-
-    {X =:= 3},
-    assertion(near(X, 3.0)).
-test(eq_unify) :-
-    {X = 3},
-    assertion(near(X, 3.0)).
-test(result_is_float) :-
-    {X =:= 3},
-    assertion(float(X)).
-test(unary_minus) :-
-    {X =:= -(-3)},
-    assertion(near(X, 3.0)).
-test(unary_plus) :-
-    {X =:= +3},
-    assertion(near(X, 3.0)).
-test(division) :-
-    {X =:= 1/4},
-    assertion(near(X, 0.25)).
-test(abs) :-
-    {X =:= abs(-7)},
-    assertion(near(X, 7.0)).
-test(min) :-
-    {X =:= min(3,4)},
-    assertion(near(X, 3.0)).
-test(max) :-
-    {X =:= max(3,4)},
-    assertion(near(X, 4.0)).
-test(pow) :-
-    {X =:= pow(2,10)},
-    assertion(near(X, 1024.0)).
-test(hat) :-
-    {X =:= 2^10},
-    assertion(near(X, 1024.0)).
-test(exp2) :-
-    {X =:= exp(2,10)},
-    assertion(near(X, 1024.0)).
-test(negative_power) :-
-    {X =:= 2^(-2)},
-    assertion(near(X, 0.25)).
-test(zero_power) :-
-    {X =:= 5^0},
-    assertion(near(X, 1.0)).
-test(fractional_power) :-
-    {X =:= 2^0.5},
-    assertion(near(X, 1.4142135623730951)).
+test(leq, true(near(X, 3.0))) :-
+    {X =< 3, X >= 3}.
+test(leq_alt, true(near(X, 3.0))) :-
+    {<=(X, 3)}, {X >= 3}.
+test(eq_is, true(near(X, 3.0))) :-
+    {X =:= 3}.
+test(eq_unify, true(near(X, 3.0))) :-
+    {X = 3}.
+test(result_is_float, true(float(X))) :-
+    {X =:= 3}.
+test(unary_minus, true(near(X, 3.0))) :-
+    {X =:= -(-3)}.
+test(unary_plus, true(near(X, 3.0))) :-
+    {X =:= +3}.
+test(division, true(near(X, 0.25))) :-
+    {X =:= 1/4}.
+test(abs, true(near(X, 7.0))) :-
+    {X =:= abs(-7)}.
+test(min, true(near(X, 3.0))) :-
+    {X =:= min(3,4)}.
+test(max, true(near(X, 4.0))) :-
+    {X =:= max(3,4)}.
+test(pow, true(near(X, 1024.0))) :-
+    {X =:= pow(2,10)}.
+test(hat, true(near(X, 1024.0))) :-
+    {X =:= 2^10}.
+test(exp2, true(near(X, 1024.0))) :-
+    {X =:= exp(2,10)}.
+test(negative_power, true(near(X, 0.25))) :-
+    {X =:= 2^(-2)}.
+test(zero_power, true(near(X, 1.0))) :-
+    {X =:= 5^0}.
+test(fractional_power, true(near(X, 1.4142135623730951))) :-
+    {X =:= 2^0.5}.
 
 % Symbolic "Monash" constants; CLP(R) only.
 
-test(constant_pi) :-
-    {X =:= #(pi)},
-    assertion(near(X, pi)).
-test(constant_p) :-
-    {X =:= #(p)},
-    assertion(near(X, pi)).
-test(constant_e) :-
-    {X =:= #(e)},
-    assertion(near(X, e)).
-test(constant_zero) :-
-    {X =:= #(zero)},
-    assertion(near(X, 1.0e-10)).
+test(constant_pi, true(near(X, pi))) :-
+    {X =:= #(pi)}.
+test(constant_p, true(near(X, pi))) :-
+    {X =:= #(p)}.
+test(constant_e, true(near(X, e))) :-
+    {X =:= #(e)}.
+test(constant_zero, true(near(X, 1.0e-10))) :-
+    {X =:= #(zero)}.
 
 % Errors
 
@@ -200,39 +177,29 @@ test(bb_inf_bad_int, error(type_error(var, _))) :-
 
 test(cancel) :-
     {X - X =:= 0}, var(X).
-test(cancel_sum) :-
-    {Y =:= X + 1 - X},
-    assertion(near(Y, 1.0)).
-test(collect) :-
-    {Y =:= 2*X + 3*X - 5*X},
-    assertion(near(Y, 0.0)).
-test(distribute) :-
-    {Y =:= (X+1)*(X-1) - X*X},
-    assertion(near(Y, -1.0)).
-test(binomial) :-
-    {Y =:= (X+1)^2 - X^2 - 2*X},
-    assertion(near(Y, 1.0)).
-test(binomial_big) :-
-    {Y =:= (1+X)^3 - (1 + 3*X + 3*X^2 + X^3)},
-    assertion(near(Y, 0.0)).
-test(scalar_product) :-
-    {X =:= 3*4},
-    assertion(near(X, 12.0)).
-test(division_by_variable_is_nonlinear) :-
-    {_ =:= 1/X},
-    assertion(var(X)).
+test(cancel_sum, true(near(Y, 1.0))) :-
+    {Y =:= X + 1 - X}.
+test(collect, true(near(Y, 0.0))) :-
+    {Y =:= 2*X + 3*X - 5*X}.
+test(distribute, true(near(Y, -1.0))) :-
+    {Y =:= (X+1)*(X-1) - X*X}.
+test(binomial, true(near(Y, 1.0))) :-
+    {Y =:= (X+1)^2 - X^2 - 2*X}.
+test(binomial_big, true(near(Y, 0.0))) :-
+    {Y =:= (1+X)^3 - (1 + 3*X + 3*X^2 + X^3)}.
+test(scalar_product, true(near(X, 12.0))) :-
+    {X =:= 3*4}.
+test(division_by_variable_is_nonlinear, true(var(X))) :-
+    {_ =:= 1/X}.
 test(division_by_zero_fails, fail) :-
     {_ =:= 1/0}.
-test(mult_two_vars_is_nonlinear) :-
-    {Z =:= X*Y},
-    assertion((var(X),var(Y),var(Z))).
-test(mult_by_constant_is_linear) :-
-    {Z =:= 3*X, X =:= 2},
-    assertion(near(Z, 6.0)).
-test(zero_snapping) :-
+test(mult_two_vars_is_nonlinear, true((var(X),var(Y),var(Z)))) :-
+    {Z =:= X*Y}.
+test(mult_by_constant_is_linear, true(near(Z, 6.0))) :-
+    {Z =:= 3*X, X =:= 2}.
+test(zero_snapping, X == 0.0) :-
     % export_binding/2 snaps a result within epsilon of 0 to exactly 0.0
-    {X =:= 1.0e-15},
-    assertion(X == 0.0).
+    {X =:= 1.0e-15}.
 
 :- end_tests(clpr_nf).
 
@@ -242,49 +209,41 @@ test(zero_snapping) :-
 
 :- begin_tests(clpr_equations).
 
-test(two_by_two) :-
-    {2*X + 3*Y =:= 7, X - Y =:= 1},
-    assertion(near(X, 2.0)),
-    assertion(near(Y, 1.0)).
-test(three_by_three) :-
+test(two_by_two, [true(near(X, 2.0)), true(near(Y, 1.0))]) :-
+    {2*X + 3*Y =:= 7, X - Y =:= 1}.
+test(three_by_three,
+     [ true(near(X, 1.0))
+     , true(near(Y, 2.0))
+     , true(near(Z, 3.0))
+     ]) :-
     { X + Y + Z =:= 6,
       X - Y + Z =:= 2,
-      X + Y - Z =:= 0 },
-    assertion(near(X, 1.0)),
-    assertion(near(Y, 2.0)),
-    assertion(near(Z, 3.0)).
-test(fractional_solution) :-
-    {3*X =:= 1},
-    assertion(near(X, 1/3)).
+      X + Y - Z =:= 0 }.
+test(fractional_solution, true(near(X, 1/3))) :-
+    {3*X =:= 1}.
 test(inconsistent, fail) :-
     {X + Y =:= 1, X + Y =:= 2}.
-test(dependent_rows) :-
-    {X + Y =:= 1, 2*X + 2*Y =:= 2},
-    assertion((var(X),var(Y))).
-test(implied_value) :-
+test(dependent_rows, true((var(X),var(Y)))) :-
+    {X + Y =:= 1, 2*X + 2*Y =:= 2}.
+test(implied_value, [true(near(X, 2.0)), true(near(Y, 1.0))]) :-
     {X + Y =:= 3},
     assertion((var(X),var(Y))),
-    {X - Y =:= 1},
-    assertion(near(X, 2.0)),
-    assertion(near(Y, 1.0)).
-test(class_merge) :-
+    {X - Y =:= 1}.
+test(class_merge,
+     [ true(near(Y, 1.0))
+     , true(near(Z, 1.0))
+     , true(near(W, 1.0))
+     ]) :-
     {X + Y =:= 1},
     {Z + W =:= 2},
     {Y =:= Z},
-    {X =:= 0},
-    assertion(near(Y, 1.0)),
-    assertion(near(Z, 1.0)),
-    assertion(near(W, 1.0)).
-test(alias) :-
-    {X =:= Y}, {X =:= 1},
-    assertion(near(Y, 1.0)).
-test(chain) :-
-    {A =:= B, B =:= C, C =:= D, D =:= 7},
-    assertion(near(A, 7.0)).
-test(negative_coefficients) :-
-    {-X - Y =:= -3, X - Y =:= 1},
-    assertion(near(X, 2.0)),
-    assertion(near(Y, 1.0)).
+    {X =:= 0}.
+test(alias, true(near(Y, 1.0))) :-
+    {X =:= Y}, {X =:= 1}.
+test(chain, true(near(A, 7.0))) :-
+    {A =:= B, B =:= C, C =:= D, D =:= 7}.
+test(negative_coefficients, [true(near(X, 2.0)), true(near(Y, 1.0))]) :-
+    {-X - Y =:= -3, X - Y =:= 1}.
 
 :- end_tests(clpr_equations).
 
@@ -294,82 +253,65 @@ test(negative_coefficients) :-
 
 :- begin_tests(clpr_inequalities).
 
-test(simple_bounds) :-
+test(simple_bounds, [true(near(I, 1.0)), true(near(S, 3.0))]) :-
     {X >= 1, X =< 3},
     assertion(var(X)),
-    inf(X, I), sup(X, S),
-    assertion(near(I, 1.0)),
-    assertion(near(S, 3.0)).
-test(meeting_bounds) :-
-    {X >= 2, X =< 2},
-    assertion(near(X, 2.0)).
+    inf(X, I), sup(X, S).
+test(meeting_bounds, true(near(X, 2.0))) :-
+    {X >= 2, X =< 2}.
 test(strict_meeting_bounds, fail) :-
     {X > 2, X =< 2}.
 test(strict_both, fail) :-
     {X > 2, X < 2}.
 test(empty_interval, fail) :-
     {X >= 3, X =< 2}.
-test(tighten_lower) :-
-    {X >= 1}, {X >= 2}, {X >= 0},
-    assertion(entailed(X >= 2)),
-    assertion(\+ entailed(X >= 3)).
-test(tighten_upper) :-
-    {X =< 5}, {X =< 3}, {X =< 9},
-    assertion(entailed(X =< 3)),
-    assertion(\+ entailed(X =< 2)).
-test(strictness_kept) :-
-    {X > 1},
-    assertion(\+ {X =:= 1}),
-    assertion(entailed(X >= 1)).
-test(two_variables) :-
+test(tighten_lower, [true(entailed(X >= 2)), true(\+ entailed(X >= 3))]) :-
+    {X >= 1}, {X >= 2}, {X >= 0}.
+test(tighten_upper, [true(entailed(X =< 3)), true(\+ entailed(X =< 2))]) :-
+    {X =< 5}, {X =< 3}, {X =< 9}.
+test(strictness_kept, [true(\+ {X =:= 1}), true(entailed(X >= 1))]) :-
+    {X > 1}.
+test(two_variables, true(near(S, 10.0))) :-
     {X + Y =< 10, X >= 0, Y >= 0},
-    sup(X, S),
-    assertion(near(S, 10.0)).
-test(triangle) :-
+    sup(X, S).
+test(triangle, true(near(Y, 0.0))) :-
     {X >= 0, Y >= 0, X + Y =< 1},
     assertion(\+ {X =:= 1, Y =:= 1}),
-    {X =:= 1},
-    assertion(near(Y, 0.0)).
+    {X =:= 1}.
 test(unbounded_sup, fail) :-
     {X >= 0},
     sup(X, _).
 test(unbounded_inf, fail) :-
     {X =< 0},
     inf(X, _).
-test(transitive) :-
+test(transitive, [true(near(Y, 1.0)), true(near(Z, 1.0))]) :-
     {X =< Y, Y =< Z, Z =< X},
-    {X =:= 1},
-    assertion(near(Y, 1.0)),
-    assertion(near(Z, 1.0)).
+    {X =:= 1}.
 test(transitive_strict, fail) :-
     {X < Y, Y < Z, Z < X}.
-test(slack_elimination) :-
+test(slack_elimination,
+     [ true(near(A, 1.0))
+     , true(near(B, 1.0))
+     , true(near(C, 1.0))
+     , true(near(D, 1.0))
+     ]) :-
     { A >= 0, B >= 0, C >= 0, D >= 0,
       A + B + C + D =< 4,
       A + B + C + D >= 4,
-      A =< 1, B =< 1, C =< 1, D =< 1 },
-    assertion(near(A, 1.0)),
-    assertion(near(B, 1.0)),
-    assertion(near(C, 1.0)),
-    assertion(near(D, 1.0)).
-test(negative_bounds) :-
+      A =< 1, B =< 1, C =< 1, D =< 1 }.
+test(negative_bounds, true(near(S, -5.0))) :-
     {X =< -5},
     assertion(entailed(X < 0)),
-    sup(X, S),
-    assertion(near(S, -5.0)).
-test(scaled_bound) :-
+    sup(X, S).
+test(scaled_bound, true(near(S, 7/3))) :-
     {3*X =< 7},
-    sup(X, S),
-    assertion(near(S, 7/3)).
-test(mixed_eq_ineq) :-
+    sup(X, S).
+test(mixed_eq_ineq, [true(near(I, 0.0)), true(near(S, 10.0))]) :-
     {X + Y =:= 10, X >= 0, Y >= 0},
-    inf(X, I), sup(X, S),
-    assertion(near(I, 0.0)),
-    assertion(near(S, 10.0)).
-test(epsilon_tolerance) :-
+    inf(X, I), sup(X, S).
+test(epsilon_tolerance, true(near(X, 1.0))) :-
     % Differences below 1.0e-10 are not distinguished
-    {X >= 1, X =< 1 + 1.0e-15},
-    assertion(near(X, 1.0)).
+    {X >= 1, X =< 1 + 1.0e-15}.
 
 :- end_tests(clpr_inequalities).
 
@@ -383,10 +325,9 @@ test(ground_true) :-
     {1 =\= 2}.
 test(ground_false, fail) :-
     {1 =\= 1}.
-test(delayed_ok) :-
+test(delayed_ok, true(near(X, 4.0))) :-
     {X =\= 3},
-    {X =:= 4},
-    assertion(near(X, 4.0)).
+    {X =:= 4}.
 test(delayed_violated, fail) :-
     {X =\= 3},
     {X =:= 3}.
@@ -398,21 +339,19 @@ test(two_variables) :-
     {X =:= 1},
     assertion(\+ {Y =:= 1}),
     {Y =:= 2}.
-test(expression) :-
+test(expression, true(\+ {Y =:= 1})) :-
     {X + Y =\= 1},
-    {X =:= 0},
-    assertion(\+ {Y =:= 1}).
+    {X =:= 0}.
 test(alldifferent) :-
     {A =\= B, B =\= C, A =\= C},
     {A =:= 1, B =:= 2, C =:= 3}.
 test(alldifferent_violated, fail) :-
     {A =\= B, B =\= C, A =\= C},
     {A =:= 1, B =:= 2, C =:= 1}.
-test(residual_shape) :-
+test(residual_shape, true(near(V, 3.0))) :-
     {X =\= 3},
     dump([X], [x], C),
-    C = [x =\= V],
-    assertion(near(V, 3.0)).
+    C = [x =\= V].
 
 :- end_tests(clpr_disequations).
 
@@ -422,84 +361,67 @@ test(residual_shape) :-
 
 :- begin_tests(clpr_nonlinear).
 
-test(delayed_product, [nondet]) :-
+test(delayed_product, [nondet, true(near(Y, 3.0))]) :-
     {X*Y =:= 6},
     assertion((var(X), var(Y))),
-    {X =:= 2},
-    assertion(near(Y, 3.0)).
-test(delayed_product_other_way, [nondet]) :-
+    {X =:= 2}.
+test(delayed_product_other_way, [nondet, true(near(X, 2.0))]) :-
     {X*Y =:= 6},
-    {Y =:= 3},
-    assertion(near(X, 2.0)).
-test(division_delayed, [nondet]) :-
+    {Y =:= 3}.
+test(division_delayed, [nondet, true(near(X, 6.0))]) :-
     {X/Y =:= 2},
-    {Y =:= 3},
-    assertion(near(X, 6.0)).
-test(abs_delayed, [nondet]) :-
+    {Y =:= 3}.
+test(abs_delayed, [nondet, true(near(X, 4.0))]) :-
     {X =:= abs(Y)},
-    {Y =:= -4},
-    assertion(near(X, 4.0)).
-test(min_delayed, [nondet]) :-
+    {Y =:= -4}.
+test(min_delayed, [nondet, true(near(X, 1.0))]) :-
     {X =:= min(Y,3)},
-    {Y =:= 1},
-    assertion(near(X, 1.0)).
-test(max_delayed, [nondet]) :-
+    {Y =:= 1}.
+test(max_delayed, [nondet, true(near(X, 5.0))]) :-
     {X =:= max(Y,3)},
-    {Y =:= 5},
-    assertion(near(X, 5.0)).
-test(invert_sin) :-
-    {0 =:= sin(X)},
-    assertion(near(X, 0.0)).
-test(invert_cos) :-
-    {1 =:= cos(X)},
-    assertion(near(X, 0.0)).
-test(invert_tan) :-
-    {0 =:= tan(X)},
-    assertion(near(X, 0.0)).
-test(invert_asin) :-
-    {1 =:= sin(X)},
-    assertion(near(X, pi/2)).
-test(invert_exponent) :-
+    {Y =:= 5}.
+test(invert_sin, true(near(X, 0.0))) :-
+    {0 =:= sin(X)}.
+test(invert_cos, true(near(X, 0.0))) :-
+    {1 =:= cos(X)}.
+test(invert_tan, true(near(X, 0.0))) :-
+    {0 =:= tan(X)}.
+test(invert_asin, true(near(X, pi/2))) :-
+    {1 =:= sin(X)}.
+test(invert_exponent, true(near(Y, 3.0))) :-
     % 2^Y = 8; CLP(R) gets this exactly right, CLP(Q) does not
-    {8 =:= 2^Y},
-    assertion(near(Y, 3.0)).
-test(root_odd) :-
+    {8 =:= 2^Y}.
+test(root_odd, true(near(Y, 2.0))) :-
     % isolation axiom: X and Z ground in X = Y^Z
-    {8 =:= Y^3},
-    assertion(near(Y, 2.0)).
-test(root_odd_negative) :-
-    {-8 =:= Y^3},
-    assertion(near(Y, -2.0)).
+    {8 =:= Y^3}.
+test(root_odd_negative, true(near(Y, -2.0))) :-
+    {-8 =:= Y^3}.
 test(root_even, all(Ok == [true,true])) :-
     % an even root has two solutions and CLP(R) enumerates both
     {4 =:= Y^2},
     ( near(Y, 2.0) ; near(Y, -2.0) ),
     Ok = true.
-test(square_is_solved, [nondet]) :-
+test(square_is_solved, [nondet, true(near(X, 1.4142135623730951))]) :-
     % unlike CLP(Q), this binds X
-    {X*X =:= 2},
-    assertion(near(X, 1.4142135623730951)).
-test(nonlinear_becomes_linear, [nondet]) :-
+    {X*X =:= 2}.
+test(nonlinear_becomes_linear, [nondet, true(near(Z, 1.0))]) :-
     {Z =:= X*_Y + 1},
-    {X =:= 0},
-    assertion(near(Z, 1.0)).
+    {X =:= 0}.
 test(goal_runs_once, [nondet]) :-
     {X*Y =:= 6},
     {X =:= 2, Y =:= 3}.
-test(delayed_inequality, [nondet]) :-
+test(delayed_inequality, [nondet, true(entailed(Y =< 3))]) :-
     {X*Y =< 6},
-    {X =:= 2},
-    assertion(entailed(Y =< 3)).
+    {X =:= 2}.
 test(delayed_inequality_violated, fail) :-
     {X*Y =< 6},
     {X =:= 2, Y =:= 4}.
 test(delayed_disequation, fail) :-
     {X*Y =\= 6},
     {X =:= 2, Y =:= 3}.
-test(power_of_variable_delayed, [nondet]) :-
+test(power_of_variable_delayed, [nondet, true(near(Y, 8.0))]) :-
     {Y =:= X^3},
-    {X =:= 2},
-    assertion(near(Y, 8.0)).
+    {X =:= 2}.
 
 :- end_tests(clpr_nonlinear).
 
@@ -534,12 +456,11 @@ test(linear_combination) :-
     {X + Y =:= 10, X >= 0, Y >= 0},
     entailed(X =< 10),
     entailed(X + Y >= 10).
-test(does_not_change_store) :-
+test(does_not_change_store, Before == After) :-
     {X >= 1, X =< 2},
     dump([X], [x], Before),
     ( entailed(X > 5) -> true ; true ),
-    dump([X], [x], After),
-    assertion(Before == After).
+    dump([X], [x], After).
 
 :- end_tests(clpr_entailment).
 
@@ -549,74 +470,57 @@ test(does_not_change_store) :-
 
 :- begin_tests(clpr_optimisation).
 
-test(inf_simple) :-
+test(inf_simple, true(near(I, 1.0))) :-
     {X >= 1, X =< 5},
-    inf(X, I),
-    assertion(near(I, 1.0)).
-test(sup_simple) :-
+    inf(X, I).
+test(sup_simple, true(near(S, 5.0))) :-
     {X >= 1, X =< 5},
-    sup(X, S),
-    assertion(near(S, 5.0)).
-test(inf_does_not_bind) :-
+    sup(X, S).
+test(inf_does_not_bind, true(near(S, 5.0))) :-
     {X >= 1, X =< 5},
     inf(X, _),
     assertion(var(X)),
-    sup(X, S),
-    assertion(near(S, 5.0)).
-test(inf_expression) :-
+    sup(X, S).
+test(inf_expression, true(near(I, 2.0))) :-
     {X >= 1, Y >= 1, X + Y =< 4},
-    inf(X + Y, I),
-    assertion(near(I, 2.0)).
-test(sup_expression) :-
+    inf(X + Y, I).
+test(sup_expression, true(near(S, 4.0))) :-
     {X >= 1, Y >= 1, X + Y =< 4},
-    sup(X + Y, S),
-    assertion(near(S, 4.0)).
-test(inf_vertex) :-
+    sup(X + Y, S).
+test(inf_vertex, [true(near(I,2.0)), true(near(A,1.0)), true(near(B,1.0))]) :-
     {X >= 1, Y >= 1, X + Y =< 4},
     inf(X + Y, I, [X,Y], V),
-    assertion(near(I, 2.0)),
-    V = [A,B],
-    assertion(near(A,1.0)),
-    assertion(near(B,1.0)).
-test(minimize) :-
+    V = [A,B].
+test(minimize, true(near(X, 2.0))) :-
     {X >= 2, X =< 7},
-    minimize(X),
-    assertion(near(X, 2.0)).
-test(maximize) :-
+    minimize(X).
+test(maximize, true(near(X, 7.0))) :-
     {X >= 2, X =< 7},
-    maximize(X),
-    assertion(near(X, 7.0)).
-test(minimize_expression) :-
+    maximize(X).
+test(minimize_expression, [true(near(X, 1.0)), true(near(Y, 1.0))]) :-
     {X >= 1, Y >= 1, X + Y =< 4},
-    minimize(X + Y),
-    assertion(near(X, 1.0)),
-    assertion(near(Y, 1.0)).
-test(maximize_expression) :-
+    minimize(X + Y).
+test(maximize_expression, true(entailed(X + Y =:= 4))) :-
     {X >= 1, Y >= 1, X + Y =< 4},
-    maximize(X + Y),
-    assertion(entailed(X + Y =:= 4)).
-test(lp_diet) :-
+    maximize(X + Y).
+test(lp_diet, true(near(I, 6.8))) :-
     { A >= 0, B >= 0,
       A + 2*B >= 4,
       3*A + B >= 6 },
-    inf(2*A + 3*B, I),
-    assertion(near(I, 6.8)).
+    inf(2*A + 3*B, I).
 test(unbounded_inf_fails, fail) :-
     {X >= 0},
     inf(-X, _).
-test(does_not_touch_global_variables) :-
+test(does_not_touch_global_variables, [true(near(I, 1.0)), V == mine]) :-
     nb_setval(inf, mine),
     {X >= 1, X =< 5},
     inf(X, I),
-    assertion(near(I, 1.0)),
     nb_getval(inf, V),
-    assertion(V == mine),
     nb_delete(inf).
-test(inf_waits_for_linear, [nondet]) :-
+test(inf_waits_for_linear, [nondet, true(near(I, 3.0))]) :-
     {X*Y >= 3},
     {X =:= 1},
-    inf(Y, I),
-    assertion(near(I, 3.0)).
+    inf(Y, I).
 
 :- end_tests(clpr_optimisation).
 
@@ -626,72 +530,63 @@ test(inf_waits_for_linear, [nondet]) :-
 
 :- begin_tests(clpr_bb).
 
-test(single_variable) :-
+test(single_variable, true(near(I, 1.0))) :-
     {X >= 0.5, X =< 3.5},
-    bb_inf([X], X, I),
-    assertion(near(I, 1.0)).
-test(single_variable_vertex) :-
+    bb_inf([X], X, I).
+test(single_variable_vertex, [true(near(I, 1.0)), V == [1]]) :-
     {X >= 0.5, X =< 3.5},
-    bb_inf([X], X, I, V, 0.001),
-    assertion(near(I, 1.0)),
-    assertion(V == [1]).
-test(two_variables) :-
+    bb_inf([X], X, I, V, 0.001).
+test(two_variables, true(near(I, 1.0))) :-
     {X >= 0, Y >= 0, X + Y >= 1},
-    bb_inf([X,Y], X + Y, I),
-    assertion(near(I, 1.0)).
-test(fractional_optimum) :-
+    bb_inf([X,Y], X + Y, I).
+test(fractional_optimum, true(near(I, 1.0))) :-
     {2*X >= 1, X >= 0},
-    bb_inf([X], X, I),
-    assertion(near(I, 1.0)).
-test(does_not_bind) :-
+    bb_inf([X], X, I).
+test(does_not_bind, true(near(LpInf, 0.5))) :-
     {X >= 0.5, X =< 3.5},
     bb_inf([X], X, _),
     assertion(var(X)),
-    inf(X, LpInf),
-    assertion(near(LpInf, 0.5)).
-test(knapsack) :-
+    inf(X, LpInf).
+test(knapsack, true(near(I, 3.0))) :-
     { A >= 0, B >= 0,
       A =< 3, B =< 3,
       2*A + 3*B >= 7 },
-    bb_inf([A,B], A + B, I),
-    assertion(near(I, 3.0)).
-test(objective_not_integral) :-
+    bb_inf([A,B], A + B, I).
+test(objective_not_integral, true(near(I, 1.25))) :-
     {X >= 0.5, Y >= 0.25},
-    bb_inf([X], X + Y, I),
-    assertion(near(I, 1.25)).
-test(ground_integer_ok) :-
+    bb_inf([X], X + Y, I).
+test(ground_integer_ok, true(near(I, 0.0))) :-
     {X >= 0},
-    bb_inf([2], X, I),
-    assertion(near(I, 0.0)).
+    bb_inf([2], X, I).
 test(ground_noninteger_fails, fail) :-
     {X >= 0},
     bb_inf([1.5], X, _).
 test(unbounded_fails, fail) :-
     {X >= 0},
     bb_inf([X], -X, _).
-test(does_not_touch_global_variables) :-
+test(does_not_touch_global_variables, [true(near(I, 1.0)), V == mine]) :-
     nb_setval(prov_opt, mine),
     {X >= 0.5, X =< 3.5},
     bb_inf([X], X, I),
-    assertion(near(I, 1.0)),
     nb_getval(prov_opt, V),
-    assertion(V == mine),
     nb_delete(prov_opt).
-test(bounds_are_narrowed_to_integers) :-
+test(bounds_are_narrowed_to_integers, true(near(I, 2.0))) :-
     % bb_intern/4 first narrows the *bounds* of each integer variable to
     % enclosing integers, independently of Eps
     {X >= 1.9999, X =< 5},
-    bb_inf([X], X, I, _, 0.001),
-    assertion(near(I, 2.0)).
-test(epsilon_accepts_near_integer) :-
+    bb_inf([X], X, I, _, 0.001).
+test(epsilon_accepts_near_integer, true(near(I, 1.9999))) :-
     % a ground value within Eps of an integer is accepted as integral
     {X =:= 1.9999},
-    bb_inf([X], X, I, _, 0.001),
-    assertion(near(I, 1.9999)).
+    bb_inf([X], X, I, _, 0.001).
 test(small_epsilon_rejects_near_integer, fail) :-
     % ... and rejected when Eps is tight
     {X =:= 1.9999},
     bb_inf([X], X, _, _, 1.0e-9).
+
+test(ground_objective, true(near(I, 3.0))) :-
+    {X =:= 3},
+    bb_inf([X], X, I).
 
 :- end_tests(clpr_bb).
 
@@ -701,65 +596,50 @@ test(small_epsilon_rejects_near_integer, fail) :-
 
 :- begin_tests(clpr_projection).
 
-test(empty) :-
-    dump([], [], C),
-    assertion(C == []).
-test(unconstrained) :-
-    dump([_], [x], C),
-    assertion(C == []).
-test(equation) :-
+test(empty, C == []) :-
+    dump([], [], C).
+test(unconstrained, C == []) :-
+    dump([_], [x], C).
+test(equation, true(C = [y = 1.0-x])) :-
     {X + Y =:= 1},
-    dump([X,Y], [x,y], C),
-    assertion(C = [y = 1.0-x]).
-test(bounds) :-
+    dump([X,Y], [x,y], C).
+test(bounds, [true(near(L,1.0)), true(near(U,3.0))]) :-
     {X >= 1, X =< 3},
     dump([X], [x], C),
-    C = [x >= L, x =< U],
-    assertion(near(L,1.0)),
-    assertion(near(U,3.0)).
-test(strict_bounds) :-
+    C = [x >= L, x =< U].
+test(strict_bounds, true(C = [x > _, x < _])) :-
     {X > 1, X < 3},
-    dump([X], [x], C),
-    assertion(C = [x > _, x < _]).
-test(redundant_bounds_removed) :-
+    dump([X], [x], C).
+test(redundant_bounds_removed, true(near(L, 2.0))) :-
     {X >= 1, X >= 2, X >= 0},
     dump([X], [x], C),
-    C = [x >= L],
-    assertion(near(L, 2.0)).
-test(projection_eliminates_variable) :-
+    C = [x >= L].
+test(projection_eliminates_variable, C == []) :-
     {X + Y >= 1, Y >= 0},
-    dump([X], [x], C),
-    assertion(C == []).
-test(fourier_motzkin) :-
+    dump([X], [x], C).
+test(fourier_motzkin, true(C = [x-z =< _])) :-
     {X =< Y, Y =< Z},
-    dump([X,Z], [x,z], C),
-    assertion(C = [x-z =< _]).
-test(does_not_change_store) :-
+    dump([X,Z], [x,z], C).
+test(does_not_change_store, [true(near(I,1.0)), true(near(S,3.0))]) :-
     {X >= 1, X =< 3},
     dump([X], [x], _),
-    inf(X, I), sup(X, S),
-    assertion(near(I,1.0)),
-    assertion(near(S,3.0)).
-test(nonlinear_residue) :-
+    inf(X, I), sup(X, S).
+test(nonlinear_residue, true(C = [_])) :-
     {X*Y =:= 6},
-    dump([X,Y], [x,y], C),
-    assertion(C = [_]).
-test(target_order_does_not_control_shape) :-
+    dump([X,Y], [x,y], C).
+test(target_order_does_not_control_shape, C1 == C2) :-
     {X + Y =:= 1},
     dump([X,Y], [x,y], C1),
-    dump([Y,X], [y,x], C2),
-    assertion(C1 == C2).
-test(ordering_list_controls_shape) :-
+    dump([Y,X], [y,x], C2).
+test(ordering_list_controls_shape, true(C = [y = _-x])) :-
     % the variable that comes first is the one the answer defines
     {X + Y =:= 1},
     ordering([Y,X]),
-    dump([X,Y], [x,y], C),
-    assertion(C = [y = _-x]).
-test(ordering_list_controls_shape_2) :-
+    dump([X,Y], [x,y], C).
+test(ordering_list_controls_shape_2, true(C = [x = _-y])) :-
     {X + Y =:= 1},
     ordering([X,Y]),
-    dump([X,Y], [x,y], C),
-    assertion(C = [x = _-y]).
+    dump([X,Y], [x,y], C).
 test(cyclic_ordering_list, error(cyclic_ordering(_))) :-
     {X + Y =:= 1},
     ordering([X,Y]),
@@ -778,11 +658,10 @@ test(cyclic_ordering_after_merge, error(cyclic_ordering(_))) :-
     ordering(B < A),
     X = A, Y = B,
     dump([X,Y], [x,y], _).
-test(ordering_before_constraints) :-
+test(ordering_before_constraints, true(C = [y = _-x])) :-
     ordering([Y,X]),
     {X + Y =:= 1},
-    dump([X,Y], [x,y], C),
-    assertion(C = [y = _-x]).
+    dump([X,Y], [x,y], C).
 test(target_must_be_free, error(uninstantiation_error(_))) :-
     {X =:= 1},
     dump([X], [x], _).
@@ -797,41 +676,36 @@ test(target_must_be_list, error(type_error(list(var), foo))) :-
 
 :- begin_tests(clpr_residuals).
 
-test(copy_term_bounds) :-
+test(copy_term_bounds, [true(Gs = [{_}]), true(var(Y))]) :-
     {X > 1, X < 3},
-    copy_term(X, Y, Gs),
-    assertion(Gs = [{_}]),
-    assertion(var(Y)).
-test(copy_term_is_independent) :-
+    copy_term(X, Y, Gs).
+test(copy_term_is_independent, true(var(X))) :-
     {X > 1},
     copy_term(X, Y, Gs),
     maplist(call, Gs),
-    {Y =:= 2},
-    assertion(var(X)).
-test(copy_term_unconstrained) :-
-    copy_term(_, _, Gs),
-    assertion(Gs == []).
-test(pending_optimisation_is_reusable) :-
+    {Y =:= 2}.
+test(copy_term_unconstrained, Gs == []) :-
+    copy_term(_, _, Gs).
+test(pending_optimisation_is_reusable,
+     [ nondet
+     , true(near(X2, 1.0))
+     , true(near(Y2, 1.0))
+     ]) :-
     {Y >= 1, Y =< 5},
     minimize(X*Y),
     copy_term(f(X,Y), f(X2,Y2), Gs),
     assertion(Gs = [{_}, clpr:minimize(_)]),
     maplist(call, Gs),
-    {X2 =:= 1},
-    assertion(near(X2, 1.0)),
-    assertion(near(Y2, 1.0)).
-test(dump_omits_pending_goals) :-
+    {X2 =:= 1}.
+test(dump_omits_pending_goals, true(C = [y >= _, y =< _])) :-
     {Y >= 1, Y =< 5},
     minimize(_X*Y),
-    dump([Y], [y], C),
-    assertion(C = [y >= _, y =< _]).
-test(residual_is_reusable) :-
+    dump([Y], [y], C).
+test(residual_is_reusable, [true(near(I,1.0)), true(near(S,3.0))]) :-
     {X >= 1, X =< 3},
     copy_term(X, Y, Gs),
     maplist(call, Gs),
-    inf(Y, I), sup(Y, S),
-    assertion(near(I,1.0)),
-    assertion(near(S,3.0)).
+    inf(Y, I), sup(Y, S).
 
 :- end_tests(clpr_residuals).
 
@@ -857,20 +731,16 @@ test(unify_atom_type_error, error(type_error(real, a))) :-
 test(unify_two_constrained) :-
     {X >= 1}, {Y =< 0},
     \+ X = Y.
-test(unify_two_constrained_ok) :-
+test(unify_two_constrained_ok, [true(near(I,1.0)), true(near(S,3.0))]) :-
     {X >= 1}, {Y =< 3},
     X = Y,
-    inf(X, I), sup(X, S),
-    assertion(near(I,1.0)),
-    assertion(near(S,3.0)).
-test(unify_propagates_equation) :-
+    inf(X, I), sup(X, S).
+test(unify_propagates_equation, true(near(X, 0.5))) :-
     {X + Y =:= 1},
-    X = Y,
-    assertion(near(X, 0.5)).
-test(clp_type_r) :-
+    X = Y.
+test(clp_type_r, T == clpr) :-
     {X > 1},
-    clp_type(X, T),
-    assertion(T == clpr).
+    clp_type(X, T).
 test(clp_type_unconstrained, fail) :-
     clp_type(_, _).
 test(mix_clpr_clpq, error(permission_error(_,_,_))) :-
@@ -881,6 +751,22 @@ test(mix_clpr_clpq_unify, error(permission_error(_,_,_))) :-
     clpq:{Y > 2},
     X = Y.
 
+test(mix_detected_in_inequality_leq, error(permission_error(_,_,_))) :-
+    clpq:{X >= 1},
+    {X =< 0}.
+test(mix_detected_in_inequality_geq, error(permission_error(_,_,_))) :-
+    clpq:{X =< 1},
+    {X >= 2}.
+test(mix_detected_in_strict_lower, error(permission_error(_,_,_))) :-
+    clpq:{X =< 1},
+    {X > 2}.
+test(mix_detected_in_nonstrict_upper, error(permission_error(_,_,_))) :-
+    clpq:{X >= 1},
+    {X =< -1}.
+test(mix_detected_in_nonstrict_lower, error(permission_error(_,_,_))) :-
+    clpq:{X =< 1},
+    {X >= 2}.
+
 :- end_tests(clpr_unify).
 
 		 /*******************************
@@ -889,173 +775,142 @@ test(mix_clpr_clpq_unify, error(permission_error(_,_,_))) :-
 
 :- begin_tests(clpr_internals).
 
-test(fresh_strict_upper) :-
+test(fresh_strict_upper, [true(near(S, 0.0)), true(\+ {X =:= 0})]) :-
     {X < 0},
-    sup(X, S),
-    assertion(near(S, 0.0)),
-    assertion(\+ {X =:= 0}).
-test(fresh_strict_lower) :-
+    sup(X, S).
+test(fresh_strict_lower, [true(near(I, 0.0)), true(\+ {X =:= 0})]) :-
     {X > 0},
-    inf(X, I),
-    assertion(near(I, 0.0)),
-    assertion(\+ {X =:= 0}).
-test(fresh_nonstrict_upper) :-
+    inf(X, I).
+test(fresh_nonstrict_upper, true(near(S, 0.0))) :-
     {X =< 0},
     sup(X, S),
-    assertion(near(S, 0.0)),
     {X =:= 0}.
-test(fresh_nonstrict_lower) :-
+test(fresh_nonstrict_lower, true(near(I, 0.0))) :-
     {X >= 0},
     inf(X, I),
-    assertion(near(I, 0.0)),
     {X =:= 0}.
 test(ground_inequality_after_aliasing) :-
     {X =:= Y},
     {X - Y =< 1},
     assertion(\+ {X - Y < 0}),
     {X - Y =< 0}.
-test(bound_on_dependent_variable) :-
+test(bound_on_dependent_variable, true(C = [z >= _, z =< _])) :-
     {Z =:= _X + _Y},
     {Z >= 1, Z =< 3},
-    dump([Z], [z], C),
-    assertion(C = [z >= _, z =< _]).
-test(lower_bound_repair) :-
+    dump([Z], [z], C).
+test(lower_bound_repair, true(near(I, 3.0))) :-
     {X =< 5, Y =< 5},
     {Z =:= X + Y},
     {Z >= 8},
-    inf(X, I),
-    assertion(near(I, 3.0)).
-test(implied_bound_narrowing) :-
+    inf(X, I).
+test(implied_bound_narrowing, true(near(S, 1.0))) :-
     {X >= 0, X =< 10, Y >= 0, Y =< 1, X =< Y},
-    sup(X, S),
-    assertion(near(S, 1.0)).
-test(unbounded_culprit) :-
+    sup(X, S).
+test(unbounded_culprit, true(near(S, 99.0))) :-
     {X >= 0},
     {Y =:= X + 1},
     {Y =< 100},
     {X =< 200},
-    sup(X, S),
-    assertion(near(S, 99.0)).
-test(chained_classes) :-
+    sup(X, S).
+test(chained_classes,
+     [ true(near(B,1.0))
+     , true(near(C,1.0))
+     , true(near(D,2.0))
+     ]) :-
     {A + B =:= 1, B + C =:= 2, C + D =:= 3},
-    {A =:= 0},
-    assertion(near(B,1.0)),
-    assertion(near(C,1.0)),
-    assertion(near(D,2.0)).
-test(simplex_three_variables) :-
+    {A =:= 0}.
+test(simplex_three_variables, true(near(S, 10.0))) :-
     { X >= 0, Y >= 0, Z >= 0,
       X + Y + Z =< 10,
       X + 2*Y =< 8,
       Y + 3*Z =< 9 },
-    sup(X + Y + Z, S),
-    assertion(near(S, 10.0)).
-test(strict_slack) :-
+    sup(X + Y + Z, S).
+test(strict_slack, [true(near(S, 1.0)), true(\+ {X =:= 1})]) :-
     {X + Y < 1, X > 0, Y > 0},
-    sup(X, S),
-    assertion(near(S, 1.0)),
-    assertion(\+ {X =:= 1}).
+    sup(X, S).
 test(nonzero_with_bound) :-
     {X =\= 0},
     {X >= 0},
     \+ {X =:= 0}.
-test(fourier_motzkin_two_sided) :-
+test(fourier_motzkin_two_sided, true(C = [x >= _, x =< _])) :-
     {X - Y =< 1, Y - X =< 1, Y >= 0, Y =< 10},
-    dump([X], [x], C),
-    assertion(C = [x >= _, x =< _]).
+    dump([X], [x], C).
 
 % Aliasing variables with different bound types re-posts the bounds of one
 % on the other (verify_type_var/5 in itf_r.pl).
 
-test(alias_upper_with_lower) :-
+test(alias_upper_with_lower, [true(near(I, 0.0)), true(near(S, 5.0))]) :-
     {X =< 5}, {Y >= 0},
     X = Y,
-    inf(X, I), sup(X, S),
-    assertion(near(I, 0.0)),
-    assertion(near(S, 5.0)).
-test(alias_two_intervals) :-
+    inf(X, I), sup(X, S).
+test(alias_two_intervals, [true(near(I, 2.0)), true(near(S, 5.0))]) :-
     {X >= 1, X =< 5}, {Y >= 2, Y =< 9},
     X = Y,
-    inf(X, I), sup(X, S),
-    assertion(near(I, 2.0)),
-    assertion(near(S, 5.0)).
-test(alias_strict_bounds) :-
+    inf(X, I), sup(X, S).
+test(alias_strict_bounds, [true(\+ {X =:= 1}), true(\+ {X =:= 5})]) :-
     {X > 1}, {Y < 5},
-    X = Y,
-    assertion(\+ {X =:= 1}),
-    assertion(\+ {X =:= 5}).
-test(alias_strict_intervals) :-
+    X = Y.
+test(alias_strict_intervals, true(C = [x > _, x < _])) :-
     {X > 1, X < 9}, {Y > 0, Y < 5},
     X = Y,
-    dump([X], [x], C),
-    assertion(C = [x > _, x < _]).
-test(alias_after_pivoting) :-
+    dump([X], [x], C).
+test(alias_after_pivoting, true(near(I, 2.0))) :-
     {X >= 1, Y >= 1, X + Y =< 4},
     sup(X, _),
     {Z >= 2},
     X = Z,
-    inf(X, I),
-    assertion(near(I, 2.0)).
+    inf(X, I).
 
 % Several delayed goals on one variable.
 
-test(two_delayed_goals, [nondet]) :-
+test(two_delayed_goals, [nondet, true(near(Y, 3.0)), true(near(Z, 6.0))]) :-
     {X*Y =:= 6},
     {X*Z =:= 12},
-    {X =:= 2},
-    assertion(near(Y, 3.0)),
-    assertion(near(Z, 6.0)).
-test(nonlinear_residual_is_reported_once) :-
+    {X =:= 2}.
+test(nonlinear_residual_is_reported_once, true(Gs = [{_}])) :-
     {X*Y =:= 6},
-    copy_term(X-Y, _, Gs),
-    assertion(Gs = [{_}]).
-test(unrelated_stores_are_reported_separately) :-
+    copy_term(X-Y, _, Gs).
+test(unrelated_stores_are_reported_separately, true(Gs = [{_},{_}])) :-
     {X*Y =:= 6},
     {A + B =:= 1},
-    copy_term(f(X,Y,A,B), _, Gs),
-    assertion(Gs = [{_},{_}]).
-test(alias_across_delayed_goals, [nondet]) :-
+    copy_term(f(X,Y,A,B), _, Gs).
+test(alias_across_delayed_goals,
+     [ nondet
+     , true(near(Y, 3.0))
+     , true(near(W, 4.0))
+     ]) :-
     {X*Y =:= 6},
     {Z*W =:= 12},
     Y = Z,
-    {X =:= 2},
-    assertion(near(Y, 3.0)),
-    assertion(near(W, 4.0)).
+    {X =:= 2}.
 
 % Projections leaving active bounds and mixed strictness behind.
 
-test(project_strict_system) :-
+test(project_strict_system, true(C = [x < _, x > _])) :-
     {X > 0, Y > 0, X + Y < 10, X - Y > -5},
-    dump([X], [x], C),
-    assertion(C = [x < _, x > _]).
-test(project_with_equality) :-
+    dump([X], [x], C).
+test(project_with_equality, true(C = [x-y =< _, x+y =< _, x >= _])) :-
     {X >= 0, Y >= 0, Z >= 0, X + Y + Z =:= 1, X =< Y},
-    dump([X,Y], [x,y], C),
-    assertion(C = [x-y =< _, x+y =< _, x >= _]).
-test(project_mixed_strictness) :-
+    dump([X,Y], [x,y], C).
+test(project_mixed_strictness, true(C = [y = _-x, x < _, x >= _])) :-
     {X >= 1, X < 5, Y > 1, Y =< 5, X + Y =:= 4},
-    dump([X,Y], [x,y], C),
-    assertion(C = [y = _-x, x < _, x >= _]).
-test(project_after_optimisation) :-
+    dump([X,Y], [x,y], C).
+test(project_after_optimisation, true(C = [y >= _, x+y =< _, x >= _])) :-
     {X >= 1, Y >= 1, X + Y =< 6},
     sup(X + Y, _),
-    dump([X,Y], [x,y], C),
-    assertion(C = [y >= _, x+y =< _, x >= _]).
-test(project_strict_interval) :-
+    dump([X,Y], [x,y], C).
+test(project_strict_interval, true(C = [y > _, x+y =< _, x > _])) :-
     {X > 0, X < 10, Y > 0, Y < 10, X + Y =< 5},
-    dump([X,Y], [x,y], C),
-    assertion(C = [y > _, x+y =< _, x > _]).
+    dump([X,Y], [x,y], C).
 
 % Ground evaluation of the non-linear functions (nl_eval/2).
 
-test(eval_sin) :-
-    {X =:= sin(0)},
-    assertion(near(X, 0.0)).
-test(eval_cos) :-
-    {X =:= cos(0)},
-    assertion(near(X, 1.0)).
-test(eval_tan) :-
-    {X =:= tan(0)},
-    assertion(near(X, 0.0)).
+test(eval_sin, true(near(X, 0.0))) :-
+    {X =:= sin(0)}.
+test(eval_cos, true(near(X, 1.0))) :-
+    {X =:= cos(0)}.
+test(eval_tan, true(near(X, 0.0))) :-
+    {X =:= tan(0)}.
 
 % Trivially true and trivially false ground inequalities.
 
@@ -1068,75 +923,110 @@ test(ground_lt, fail) :-
 
 % Non-linear comparisons other than equality are delayed too.
 
-test(nonlinear_lt_delayed) :-
-    {X*Y < 0},
-    assertion((var(X),var(Y))).
-test(nonlinear_le_delayed) :-
-    {X*_Y =< 0},
-    assertion(var(X)).
-test(nonlinear_lt_woken, [nondet]) :-
+test(nonlinear_lt_delayed, true((var(X),var(Y)))) :-
+    {X*Y < 0}.
+test(nonlinear_le_delayed, true(var(X))) :-
+    {X*_Y =< 0}.
+test(nonlinear_lt_woken, [nondet, true(C = [y < _])]) :-
     {X*Y < 6},
     {X =:= 2},
-    dump([Y], [y], C),
-    assertion(C = [y < _]).
+    dump([Y], [y], C).
 
 % Residual goals for each kind of delayed constraint (transg//1).
 
-test(residual_nonlinear_le) :-
+test(residual_nonlinear_le, true(C = [_ + y*x =< _])) :-
     {X*Y =< 6},
-    dump([X,Y], [x,y], C),
-    assertion(C = [_ + y*x =< _]).
-test(residual_nonlinear_lt) :-
+    dump([X,Y], [x,y], C).
+test(residual_nonlinear_lt, true(C = [_ + y*x < _])) :-
     {X*Y < 6},
-    dump([X,Y], [x,y], C),
-    assertion(C = [_ + y*x < _]).
-test(residual_nonlinear_ne) :-
+    dump([X,Y], [x,y], C).
+test(residual_nonlinear_ne, true(C = [_ + y*x =\= _])) :-
     {X*Y =\= 6},
-    dump([X,Y], [x,y], C),
-    assertion(C = [_ + y*x =\= _]).
-test(residual_negative_exponent) :-
+    dump([X,Y], [x,y], C).
+test(residual_negative_exponent, true(C = [x - _/y = _])) :-
     {X =:= 1/Y},
-    dump([X,Y], [x,y], C),
-    assertion(C = [x - _/y = _]).
-test(residual_nested_function) :-
+    dump([X,Y], [x,y], C).
+test(residual_nested_function, true(C = [x - sin(_+y) = _])) :-
     {X =:= sin(Y+1)},
-    dump([X,Y], [x,y], C),
-    assertion(C = [x - sin(_+y) = _]).
+    dump([X,Y], [x,y], C).
 
 % Optimisation of an expression that is not yet linear waits.
 
-test(minimize_waits_for_linear, [nondet]) :-
+test(minimize_waits_for_linear,
+     [ nondet
+     , true(near(X, 1.0))
+     , true(near(Y, 1.0))
+     ]) :-
     {Y >= 1, Y =< 5},
     minimize(X*Y),
-    {X =:= 1},
-    assertion(near(X, 1.0)),
-    assertion(near(Y, 1.0)).
-test(inf_of_nonlinear_waits, [nondet]) :-
+    {X =:= 1}.
+test(inf_of_nonlinear_waits, [nondet, true(near(I, 1.0))]) :-
     {Y >= 1, Y =< 5},
     inf(X*Y, I),
-    {X =:= 1},
-    assertion(near(I, 1.0)).
+    {X =:= 1}.
 
 % Division by a non-constant.
 
-test(division_by_expression, [nondet]) :-
+test(division_by_expression, [nondet, true(near(X, 0.5))]) :-
     {X =:= 1/(Y+1)},
-    {Y =:= 1},
-    assertion(near(X, 0.5)).
+    {Y =:= 1}.
 
 % Wide expressions take the recursive branches of the logarithmic helpers.
 
-test(wide_product, [nondet]) :-
+test(wide_product, [nondet, true(near(Z, 25.0))]) :-
     {Z =:= (A+B+C+D+E)*(A+B+C+D+E)},
-    {A =:= 1, B =:= 1, C =:= 1, D =:= 1, E =:= 1},
-    assertion(near(Z, 25.0)).
-test(wide_repair, [nondet]) :-
+    {A =:= 1, B =:= 1, C =:= 1, D =:= 1, E =:= 1}.
+test(wide_repair, [nondet, true(near(Z, 44.0))]) :-
     {Z =:= A*B + C*D + E*F},
-    {A =:= 1, B =:= 2, C =:= 3, D =:= 4, E =:= 5, F =:= 6},
-    assertion(near(Z, 44.0)).
+    {A =:= 1, B =:= 2, C =:= 3, D =:= 4, E =:= 5, F =:= 6}.
 test(entailed_disequation) :-
     {X =:= 4},
     entailed(X =\= 3).
+
+% --- gaps found by reading the annotated coverage sources ---
+
+test(row_cancellation,
+     [ true(near(X, 2.0))
+     , true(near(A, 3.0))
+     , true(near(B, 1.0))
+     ]) :-
+    {A =:= X + Y},
+    {B =:= X - Y},
+    {A + B =:= 4},
+    {Y =:= 1}.
+test(leading_coefficient_minus_one, C == [y = -x]) :-
+    {X + Y =:= 0},
+    dump([X,Y], [x,y], C).
+test(nonzero_variable_becomes_linear, true(near(Y, 4.0))) :-
+    {X =\= 3},
+    X = Y,
+    {Y + Z =:= 5},
+    {Z =:= 1}.
+test(mix_detected_in_inequality, error(permission_error(_,_,_))) :-
+    clpq:{X >= 1},
+    {X < 0}.
+test(exponent_cancellation, true(near(Y, 1.0))) :-
+    {Y =:= X * (1/X)}.
+test(optimisation_redelayed, [nondet, true(var(Z))]) :-
+    {X*Y*Z >= 1},
+    minimize(X*Y*Z),
+    {X =:= 1}.
+
+test(residual_leading_coefficient, true(C = [2.0*(x*y) =< _])) :-
+    {2*X*Y =< 0},
+    dump([X,Y], [x,y], C).
+test(residual_leading_negation, true(C = [-(y*x) =< _])) :-
+    {-(X*Y) =< 0},
+    dump([X,Y], [x,y], C).
+test(row_cancellation_in_merge, [true(near(A, 7.0)), true(near(B, -7.0))]) :-
+    {A =:= X}, {B =:= 0-X}, {C =:= 0},
+    {A + B + C =:= 0},
+    assertion(var(X)),
+    {X =:= 7}.
+test(renormalize_over_bound_variable, true(C = [z = _-y])) :-
+    {X + Y + Z =:= 1}, {X =:= 0},
+    ordering([Z,Y]),
+    dump([Y,Z], [y,z], C).
 
 :- end_tests(clpr_internals).
 
@@ -1154,19 +1044,16 @@ mg(P, T, I, B, MP) :-
     {T > 1, P1 =:= P*(1+I) - MP, T1 =:= T - 1},
     mg(P1, T1, I, B, MP).
 
-test(mortgage_forward) :-
+test(mortgage_forward, true(near(B, 7.0))) :-
     mg(1000, 3, 0.1, B, 400),
-    !,
-    assertion(near(B, 7.0)).
-test(mortgage_backward) :-
+    !.
+test(mortgage_backward, true(near(P, 1324000/1331))) :-
     mg(P, 3, 0.1, 0, 400),
-    !,
-    assertion(near(P, 1324000/1331)).
-test(mortgage_relation) :-
+    !.
+test(mortgage_relation, true(C = [b = _*p - _*mp])) :-
     mg(P, 3, 0.1, B, MP),
     !,
-    dump([P,B,MP], [p,b,mp], C),
-    assertion(C = [b = _*p - _*mp]).
+    dump([P,B,MP], [p,b,mp], C).
 
 % Fibonacci, forwards and backwards.  Note that the base cases must be
 % written as constraints: CLP(R) binds its variables to *floats*, so a
@@ -1179,12 +1066,10 @@ fib(N, F) :-
     fib(N1, F1),
     fib(N2, F2).
 
-test(fib_forward) :-
-    fib(10, F), !,
-    assertion(near(F, 55.0)).
-test(fib_backward) :-
-    fib(N, 55.0), !,
-    assertion(near(N, 10.0)).
+test(fib_forward, true(near(F, 55.0))) :-
+    fib(10, F), !.
+test(fib_backward, true(near(N, 10.0))) :-
+    fib(N, 55.0), !.
 test(fib_integer_head_does_not_unify, fail) :-
     % the reason for the base cases above
     int_fib(10, _).
@@ -1196,68 +1081,101 @@ int_fib(N, F) :-
     int_fib(N1, F1),
     int_fib(N2, F2).
 
-test(convex_combination) :-
+test(convex_combination, [true(near(Min, 1.0)), true(near(Max, 9.0))]) :-
     { A >= 0, B >= 0, C >= 0,
       A + B + C =:= 1,
       X =:= 1*A + 4*B + 9*C },
-    inf(X, Min), sup(X, Max),
-    assertion(near(Min, 1.0)),
-    assertion(near(Max, 9.0)).
+    inf(X, Min), sup(X, Max).
 
 % The "Variable Ordering" section of OFAI TR-95-09 works these examples
 % with the 12 period mortgage.  They are reproduced here verbatim; note
 % that assertion/1 does not keep bindings, so the shape is matched with
 % plain unification and only the coefficients are asserted.
 
-test(ordering_manual_plain) :-
+test(ordering_manual_plain,
+     [ true(near(Cp, 1.1268250301319698))
+     , true(near(Cm, 12.682503013196973))
+     ]) :-
     % {B=1.1268250301319698*P-12.682503013196973*Mp}
     mg(P, 12, 0.01, B, Mp), !,
     dump([P,B,Mp], [p,b,mp], C),
-    C = [b = Cp*p - Cm*mp],
-    assertion(near(Cp, 1.1268250301319698)),
-    assertion(near(Cm, 12.682503013196973)).
-test(ordering_manual_mp) :-
+    C = [b = Cp*p - Cm*mp].
+test(ordering_manual_mp,
+     [ nondet
+     , true(near(Cb, -0.0788487886783417))
+     , true(near(Cp, 0.08884878867834171))
+     ]) :-
     % "instead of B, you want Mp to be the defined variable":
     % {Mp= -0.0788487886783417*B+0.08884878867834171*P}
     mg(P, 12, 0.01, B, Mp), !,
     ordering([Mp]),
     dump([P,B,Mp], [p,b,mp], C),
-    C = [mp = Cb*b + Cp*p],
-    assertion(near(Cb, -0.0788487886783417)),
-    assertion(near(Cp, 0.08884878867834171)).
-test(ordering_manual_mp_p) :-
+    C = [mp = Cb*b + Cp*p].
+test(ordering_manual_mp_p,
+     [ true(near(Cp, 0.08884878867834171))
+     , true(near(Cb, 0.0788487886783417))
+     ]) :-
     % "require P to appear before (to the left of) B in an addition":
     % {Mp=0.08884878867834171*P-0.0788487886783417*B}
     mg(P, 12, 0.01, B, Mp), !,
     ordering([Mp,P]),
     dump([P,B,Mp], [p,b,mp], C),
-    C = [mp = Cp*p - Cb*b],
-    assertion(near(Cp, 0.08884878867834171)),
-    assertion(near(Cb, 0.0788487886783417)).
-test(ordering_manual_before_constraints) :-
+    C = [mp = Cp*p - Cb*b].
+test(ordering_manual_before_constraints,
+     [ true(near(Cm, -12.682503013196973))
+     , true(near(Cp, 1.1268250301319698))
+     ]) :-
     % "ordering/1 acts like a constraint: you can put it anywhere in the
     % computation": {B= -12.682503013196973*Mp+1.1268250301319698*P}
     ordering(B < Mp),
     mg(P, 12, 0.01, B, Mp), !,
     dump([P,B,Mp], [p,b,mp], C),
-    C = [b = Cm*mp + Cp*p],
-    assertion(near(Cm, -12.682503013196973)),
-    assertion(near(Cp, 1.1268250301319698)).
+    C = [b = Cm*mp + Cp*p].
 
 % Newton's method for sqrt(2), from the OFAI manual's precision section.
 
 newton(X, X0, X1) :-
     {X1 =:= X0 - (X0*X0 - X)/(2*X0)}.
 
-test(newton_sqrt2) :-
+test(newton_sqrt2, true(near(E, 1.4142135623730951))) :-
     newton(2, 1.0, A),
     newton(2, A, B),
     newton(2, B, C),
     newton(2, C, D),
-    newton(2, D, E),
-    assertion(near(E, 1.4142135623730951)).
+    newton(2, D, E).
 
 :- end_tests(clpr_examples).
+
+		 /*******************************
+		 *      TOPLEVEL PRINTING	*
+		 *******************************/
+
+% The residual constraints the toplevel prints for a query come from
+% clpr.pl's own prolog:message//1 hook rather than from attribute_goals//1.
+
+:- begin_tests(clpr_toplevel).
+
+test(bounds, true(near(B, 3.0))) :-
+    {X > 3},
+    clpr:dump_toplevel_bindings(['X'=X], C),
+    C = ['X' > B].
+test(equation, true(C = ['Y' = _-'X'])) :-
+    {X + Y =:= 1},
+    clpr:dump_toplevel_bindings(['X'=X,'Y'=Y], C).
+test(nonlinear, true(C = [_ + 'Y'*'X' = _])) :-
+    {X*Y =:= 6},
+    clpr:dump_toplevel_bindings(['X'=X,'Y'=Y], C).
+test(same_variable_reported_once, true(near(B, 3.0))) :-
+    % a variable bound to two names must be dumped only once
+    {X > 3},
+    clpr:dump_toplevel_bindings(['A'=X,'B'=X], C),
+    C = ['A' > B].
+test(unconstrained, C == []) :-
+    clpr:dump_toplevel_bindings(['X'=_], C).
+test(nonvar_binding, C == []) :-
+    clpr:dump_toplevel_bindings(['X'=foo], C).
+
+:- end_tests(clpr_toplevel).
 
 		 /*******************************
 		 *        KNOWN ISSUES		*
@@ -1270,9 +1188,8 @@ test(newton_sqrt2) :-
 test(division_by_zero_does_not_raise, fail) :-
     {_ =:= 1/0}.
 
-test(waking_leaves_choicepoint, [nondet]) :-
+test(waking_leaves_choicepoint, [nondet, true(near(Y, 3.0))]) :-
     {X*Y =:= 6},
-    {X =:= 2},
-    assertion(near(Y, 3.0)).
+    {X =:= 2}.
 
 :- end_tests(clpr_known_issues).

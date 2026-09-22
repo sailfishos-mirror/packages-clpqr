@@ -8,6 +8,9 @@ package maintainable again: the libraries have had no maintainer for a long
 time and were, until the test suite that accompanies this document, almost
 completely untested.
 
+Writing it turned up a number of defects, which are listed in [§14](#14-defects)
+together with what was done about them.
+
 * [1. Provenance and literature](#1-provenance-and-literature)
 * [2. User-visible interface](#2-user-visible-interface)
 * [3. Module map](#3-module-map)
@@ -21,7 +24,7 @@ completely untested.
 * [11. Branch and bound](#11-branch-and-bound)
 * [12. Projection and answer presentation](#12-projection-and-answer-presentation)
 * [13. CLP(Q) versus CLP(R)](#13-clpq-versus-clpr)
-* [14. Known problems](#14-known-problems)
+* [14. Defects](#14-defects)
 * [15. Testing](#15-testing)
 * [16. Working on this code](#16-working-on-this-code)
 
@@ -744,15 +747,14 @@ Other systematic differences:
 * **`numbers_only/1`.** CLP(Q) demands `rational/1` (integers are rational),
   CLP(R) demands `integer/1` or `float/1`.
 * **Symbolic constants.** `#(pi)`, `#(p)`, `#(e)`, `#(zero)` exist only in
-  CLP(R) ("provided for compatibility only", per the manual).
+  CLP(R) ("provided for compatibility only", per the manual).  The first
+  three evaluate SWI-Prolog's own `pi` and `e`.
 * **Integer exponents.** CLP(R) accepts a float exponent that happens to be
   integral (`integerp/2`); CLP(Q) requires `integer/1`.
 * **Root extraction.** Both solve `I + K*X^P = 0` for `X`, but CLP(Q) only
   accepts a rational root and fails otherwise (§9.3).
 * **`bb_inf`.** `bb_inf/4` in Q, `bb_inf/5` with an epsilon in R; R rounds the
   returned vertex with `round/1`.
-* **Global variables.** `bb_*.pl` in Q uses `nb_current/2`, in R
-  `catch(nb_getval(...),_,...)`.
 
 A consequence that bites in practice: because CLP(R) binds its variables to
 *floats*, a clause head written with an integer no longer matches.  The
@@ -774,13 +776,13 @@ your numerical problems regarding precision" — ill-conditioned problems belong
 in CLP(Q).
 
 
-## 14. Known problems
+## 14. Defects
 
-The following were found while writing this document and the test suite.  They
-are recorded here rather than fixed, so that the tests can pin down current
-behaviour first.  Tests that encode a *wrong* answer are marked in the suite.
+Everything in this section was found by reading the code against TR-95-09 and
+by probing the running system.  §14.1 to §14.5 are **fixed**, each in its own
+commit with regression tests; §14.6 lists what is still open.
 
-### 14.1 Dead code that changes behaviour
+### 14.1 Dead code
 
 The following predicates had no caller at all and have been removed, together
 with the comments and the commented-out call sites that referred to them:
@@ -815,10 +817,22 @@ Argument 7 of the `clpqr_itf` attribute is still never read or written.  It
 is left in place: renumbering the other ten would touch every `arg/3` and
 `setarg/3` call in the package for no gain.
 
-Two clauses look unreachable from `{}/1` but are kept, because the argument
-rests on how `submit_lt_c/3` and `submit_le_c/3` filter the single-variable
-case rather than on anything local: the first clause of `ineq/4` and the
-first clause of `ineq_cases/6` in `ineq_*.pl`.
+Three more pieces are unreachable but kept, because in each case the
+argument rests on something non-local rather than on the code in front of
+you.  The annotated coverage sources (§15) confirm that none of them runs:
+
+* The first clause of `ineq/4` and the first clause of `ineq_cases/6` in
+  `ineq_*.pl`, because `submit_lt_c/3` and `submit_le_c/3` filter the
+  single-variable case before the solver is entered.  With them go the
+  `I =:= 0` arms of `ineq_one/4`, which nothing else reaches.
+* The `Category = 3` arm of `solve/5` in `bv_*.pl` — "classless variable,
+  all variables bounded".  `sd/7` never assigns that category at all: every
+  variable that acquires a bound also acquires a class, so `preference/3` is
+  never called with `3-X-K`.
+
+`nf/2`'s `rational(X)` clause in `nf_q.pl` was in the same category and *has*
+been removed: every rational satisfies `number/1`, so the clause above it
+always won.
 
 ### 14.2 Wrong results
 
@@ -867,20 +881,14 @@ conspired, all of them now fixed:
 The four worked examples of the manual's "Variable Ordering" section are
 reproduced as tests in `test_clpr.pl`.
 
-### 14.4 Interface and documentation mismatches
+### 14.4 The isolating axiom for `X = Y^Z`
 
-* `dump/3` requires its first argument to be a list of *unbound* variables;
-  `{X = 1}, dump([X],[y],L)` raises `uninstantiation_error(1)`.  This is
-  documented as a known problem but is still surprising, since `X` is exactly
-  the kind of variable a user would want to dump.
-* Answers for inequalities can mention fresh slack variables:
-  `{X+Y >= 1}` prints `{Y=1-X+_A, _A>=0}`.  Documented.
-* Division by zero *fails* silently (`zero_division :- fail.` with the comment
-  `% raise_exception(_) ?`) instead of raising `evaluation_error(zero_divisor)`.
-* `library(clpq)` and `library(clpr)` cannot both be imported into one module
-  (name clashes on every exported predicate); the manual text "It is allowed
-  to use both libraries in one program" is true only with explicit module
-  qualification.
+CLP(R) solved `I + K*X^P = 0` for `X`; CLP(Q) did not, although the manual
+documents the axiom for both.  CLP(Q) now solves it exactly, enumerating the
+two roots of an even power and *failing* when the root is irrational, which
+is the right answer over the rationals.  The companion axiom `n*X^P = 0 =>
+X = 0` only holds for `P > 0`; a negative `P` now fails rather than leaving a
+residue.
 
 ### 14.5 Robustness
 
@@ -948,9 +956,12 @@ The suites are organised to follow this document:
 | `optimisation` | `inf/2,4`, `sup/2,4`, `minimize/1`, `maximize/1` |
 | `bb` | `bb_inf/3,4,5` |
 | `projection` | `dump/3`, redundancy elimination, Fourier–Motzkin |
-| `residuals` | `copy_term/3` and toplevel answer shape |
+| `residuals` | `copy_term/3` and pending optimisations |
 | `unify` | `attr_unify_hook/2`, aliasing, solver mixing |
-| `known_issues` | the defects of §14, pinned to current behaviour |
+| `internals` | paths the behavioural tests do not reach |
+| `examples` | the mortgage, Fibonacci and Newton examples of the manual |
+| `toplevel` | the answer-constraint printing in `clpq.pl` / `clpr.pl` |
+| `known_issues` | the open items of §14.6, pinned to current behaviour |
 
 Coverage is measured with `library(prolog_coverage)`:
 
@@ -960,28 +971,28 @@ Coverage is measured with `library(prolog_coverage)`:
 ?- coverage((test_clpq, test_clpr), [dir('cov'), annotate(true)]).
 ```
 
-Clause coverage of the solver as of writing (276 CLP(Q) tests + 248 CLP(R)
-tests), after the dead code of §14.1 was removed:
+Clause coverage of the solver as of writing (299 CLP(Q) tests + 265 CLP(R)
+tests):
 
 | File | Clauses | % covered |
 | --- | --- | --- |
 | `clpqr/project.pl` | 36 | 94 |
 | `clpq/store_q.pl`, `clpr/store_r.pl` | 38 | 92 |
-| `clpq/nf_q.pl` | 207 | 89 |
+| `clpq/nf_q.pl` | 206 | 90 |
 | `clpqr/dump.pl` | 28 | 89 |
-| `clpr/nf_r.pl` | 212 | 87 |
+| `clpr/nf_r.pl` | 212 | 88 |
 | `clpqr/class.pl` | 15 | 87 |
 | `clpqr/itf.pl` | 14 | 86 |
+| `clpr/bv_r.pl` | 186 | 84 |
 | `clpr/bb_r.pl` | 25 | 84 |
-| `clpr/bv_r.pl` | 187 | 83 |
-| `clpq/bv_q.pl` | 186 | 83 |
+| `clpq/bv_q.pl` | 185 | 84 |
 | `clpq/fourmotz_q.pl` | 71 | 83 |
+| `clpq/bb_q.pl` | 23 | 83 |
 | `clpqr/geler.pl` | 15 | 80 |
 | `clpr/fourmotz_r.pl` | 71 | 79 |
 | `clpq/itf_q.pl` | 34 | 77 |
-| `clpqr/ordering.pl` | 28 | 75 |
+| `clpqr/ordering.pl` | 39 | 74 |
 | `clpr/itf_r.pl` | 34 | 74 |
-| `clpq/bb_q.pl` | 25 | 72 |
 | `clpq/ineq_q.pl` | 100 | 70 |
 | `clpr/ineq_r.pl` | 100 | 69 |
 | `clpqr/redund.pl` | 34 | 59 |
@@ -1000,10 +1011,71 @@ What is left uncovered is, in decreasing order of size:
    executable clauses, and the `prolog:message//1` clauses of `clpq.pl` and
    `clpr.pl` that only the interactive toplevel reaches.
 
-To find these, ask `library(prolog_coverage)` for annotated sources
-(`annotate(true), line_numbers(true)`): each clause is prefixed with its
-entry/exit counts, `###` marking a clause that was never entered and `--`
-one that was entered but never exited.
+### Reading the annotated sources
+
+Clause percentages hide two things this solver is full of: branches inside a
+clause that are never taken, and clauses that are entered but never exit.
+`library(prolog_coverage)` annotates *call sites* as well as clause heads, so
+both are visible:
+
+```prolog
+?- coverage((test_clpq, test_clpr),
+            [ dir(cov), annotate(true), line_numbers(true), color(false),
+              roots(['.../library/ext/clpqr'])
+            ]).
+```
+
+| Mark | Meaning |
+| --- | --- |
+| `###` | never executed |
+| `++N` | entered N times, always succeeded |
+| `--N` | entered N times, **never** succeeded |
+| `+N-M` | succeeded N times, failed M |
+| `+N*M` | entered N times, succeeded M |
+| `---` | call site never reached |
+
+Two cautions.  The source column is *per file* — it is `6 + max annotation
+width` — so align against the original file rather than assuming a fixed
+offset.  And `++0` on an inlined built-in is an artifact, not a gap: in
+
+```
+ 207 +140-6   submit_eq_b(v(_,[X^P])) :-
+ 208 +144-2   	var(X),
+ 209 ++0      	P > 0,
+ 211 +140-3   	X = 0.
+```
+
+the guard cannot really have run zero times when the body below it succeeded
+140 times.  Arithmetic comparisons compile to VM instructions with no call
+port.  Filter them out before drawing conclusions.
+
+What the annotations showed, over and above the clause-level gaps:
+
+* `add_linear_11h/6` — the coefficient-cancellation arm had never run, in 289
+  entries.  Cancellation is precisely where a linear solver goes wrong, and
+  reaching it needs a three-monomial constraint, so that `log_deref/4` splits
+  and merges the halves.
+* `nf2sum/3` and `f02t/2` — the arms that render an answer whose leading
+  coefficient is not 1.
+* `pmerge_case/9` — exponent cancellation, `X * (1/X)`.
+* `wait_linear_retry/3` — the arm that re-delays an optimisation whose
+  expression is *still* non-linear when it wakes.
+* `bb_reoptimize/2` — the clause for an objective that is already ground.
+* The solver-mixing guard is repeated in all eight `ineq_one_*` entry points
+  and only two of them were exercised.
+* `renormalize_log_one/3` — the arm for a class variable already bound to a
+  number, which needs an `ordering/1` to make `arrange/2` renormalise.
+
+Tests for all of these are in the `internals` units; they took the number of
+unreached call sites, excluding inlined built-ins, from 113 down to 93.
+
+The clauses that are *entered but never succeed* are mostly by design — the
+`var(X), !, fail` guards, `negate_l/4` and `negate_u/4` in `clpqr/redund.pl`,
+which are documented to fail when a bound is not redundant, and first clauses
+that exist only to test their head arguments.  The ones worth knowing about
+are `redundant/3` for `t_L` and `t_U`: in the whole suite an *active* bound
+was never found redundant, so those two clauses have 20 entries and no
+successes.
 
 
 ## 16. Working on this code
@@ -1125,13 +1197,37 @@ the two optimisers hide the same defect from each other.
 
 ### Writing tests here
 
-* `assertion/1` does not keep bindings — it is `\+ \+ Goal`.  Match the shape
-  of an answer with plain unification first, then `assertion/1` the numbers:
+* **The result of a test goes in the second argument of `test/2`, not in an
+  `assertion/1` in the body.**  plunit expands a bare `==`, `=`, `=@=` or
+  `=:=` into a `true/1` option, `join_true_options/2` merges several of them,
+  and a failure then names the variable:
 
   ```prolog
+  test(negative_coefficients, [X == 2, Y == 1]) :-
+      {-X - Y =:= -3, X - Y =:= 1}.
+  ```
+  ```
+  wrong answer for Y (compared using ==)
+      Expected: 77
+      Got:      1
+  ```
+
+  Anything that is not a comparison goes in `true(Goal)` — that is how the
+  CLP(R) suite uses its tolerant `near/2`.  A test mode (`fail`, `error(_)`,
+  `throws(_)`, `all(_)`, `set(_)`) cannot be combined with `true/1`, so those
+  tests carry no result options.
+* `assertion/1` is then only for *intermediate* state — that a variable is
+  still unbound before the next constraint, that something is not yet
+  entailed.  Those are steps in the scenario, not the answer.
+* `assertion/1` does not keep bindings — it is `\+ \+ Goal`.  So match the
+  shape of an answer with plain unification in the body and check the numbers
+  in the head:
+
+  ```prolog
+  test(bounds, [true(near(L, 1.0)), true(near(U, 3.0))]) :-
+      {X >= 1, X =< 3},
       dump([X], [x], C),
-      C = [x >= L, x =< U],
-      assertion(near(L, 1.0)).
+      C = [x >= L, x =< U].
   ```
 * In CLP(R), compare with a tolerance (`near/2` in `test_clpr.pl`), never
   `==`.  `{X =:= 3}` gives `3.0`, and `1/3` is not `0.3333333333333333` under

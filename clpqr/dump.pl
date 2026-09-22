@@ -202,7 +202,7 @@ clpqr_itf:attribute_goals(V) -->
 	      dump(Vs, NVs, List),
 	      List \== [],
 	      NVs = Vs,
-	      del_itf(Vs),
+	      del_solver_atts(Vs),
 	      list_to_conj(List, Conj)
 	    }
 	->  [ {}(Conj) ]
@@ -213,10 +213,20 @@ clpqr_class:attribute_goals(_) --> [].
 
 clpqr_geler:attribute_goals(V) --> clpqr_itf:attribute_goals(V).
 
-del_itf([]).
-del_itf([H|T]) :-
+% del_solver_atts(Vars)
+%
+% dump/3 above reports the constraints on all of Vars at once, so the
+% solver attributes are removed from all of them to stop attribute_goals//1
+% reporting the same conjunction again for the next variable.  Both
+% attributes must go: a variable that only carries a delayed non-linear
+% goal has no clpqr_itf attribute at all, and removing only that one made
+% such constraints appear once per variable.
+
+del_solver_atts([]).
+del_solver_atts([H|T]) :-
 	del_attr(H, clpqr_itf),
-	del_itf(T).
+	del_attr(H, clpqr_geler),
+	del_solver_atts(T).
 
 
 list_to_conj([], true) :- !.

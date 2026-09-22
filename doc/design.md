@@ -688,8 +688,11 @@ otherwise, scaled so that the first coefficient is 1.  `nf2sum/3` and
 
 `attribute_goals//1` in `dump.pl` wraps this for `copy_term/3` and for the
 toplevel: it calls `dump/3` on the attributed variables of the term, wraps the
-result in `{}/1`, and deletes the `clpqr_itf` attribute of the variables it has
-already reported so that the goals are not emitted once per variable.
+result in `{}/1`, and then deletes the `clpqr_itf` *and* `clpqr_geler`
+attributes of every variable it has just reported, so that the same
+conjunction is not emitted once per variable.  Both have to go, because a
+variable that carries only a delayed non-linear goal has no `clpqr_itf`
+attribute at all.
 
 
 ## 13. CLP(Q) versus CLP(R)
@@ -787,21 +790,6 @@ entered: the first clause of `ineq/4` and the first clause of
 `ineq_cases/6` in `ineq_*.pl`.
 
 ### 14.2 Wrong results
-
-* **Residual goals are duplicated for purely non-linear stores.**
-  `clpqr/dump.pl:200-214`: `attribute_goals//1` deletes the `clpqr_itf`
-  attribute of the variables it has reported, but not the `clpqr_geler`
-  attribute, and `clpqr_geler:attribute_goals//1` forwards to the same code.
-  A variable that only has delayed goals is therefore reported once per
-  variable:
-
-  ```
-  ?- {X*Y =:= 6}.
-  {-6+Y*X=0},
-  {-6+Y*X=0}.
-  ```
-
-  With three delayed goals the answer is printed three times, and so on.
 
 * **A pending optimisation leaks into the residual goals.**  When
   `minimize/1`, `inf/2` or `bb_inf/3` is still waiting for its expression to

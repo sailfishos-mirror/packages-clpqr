@@ -943,6 +943,15 @@ test(two_delayed_goals, [nondet]) :-
     {X =:= 2},
     assertion(near(Y, 3.0)),
     assertion(near(Z, 6.0)).
+test(nonlinear_residual_is_reported_once) :-
+    {X*Y =:= 6},
+    copy_term(X-Y, _, Gs),
+    assertion(Gs = [{_}]).
+test(unrelated_stores_are_reported_separately) :-
+    {X*Y =:= 6},
+    {A + B =:= 1},
+    copy_term(f(X,Y,A,B), _, Gs),
+    assertion(Gs = [{_},{_}]).
 test(alias_across_delayed_goals, [nondet]) :-
     {X*Y =:= 6},
     {Z*W =:= 12},
@@ -1167,13 +1176,6 @@ test(ordering_conflicts_with_dump, throws(unsatisfiable_ordering)) :-
     {X + Y =:= 1},
     ordering([Y,X]),
     dump([X,Y], [x,y], _).
-
-test(nonlinear_residuals_are_duplicated) :-
-    % attribute_goals//1 does not delete the clpqr_geler attribute of the
-    % variables it has already reported.  Should be a single goal.
-    {X*Y =:= 6},
-    copy_term(X-Y, _, Gs),
-    assertion(Gs = [_,_]).
 
 test(pending_optimisation_leaks_into_residual) :-
     % A minimize/1 still waiting for a linear expression puts its internal

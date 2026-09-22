@@ -1066,7 +1066,18 @@ test(two_delayed_goals_residual) :-
     {X*_Y =:= 6},
     {X*_Z =:= 12},
     copy_term(X, _, Gs),
-    assertion(Gs \== []).
+    assertion(Gs = [{_}]).
+test(nonlinear_residual_is_reported_once) :-
+    % every variable of a purely non-linear store carries the same delayed
+    % goal; attribute_goals//1 must report the conjunction only once
+    {X*Y =:= 6},
+    copy_term(X-Y, _, Gs),
+    assertion(Gs = [{_}]).
+test(unrelated_stores_are_reported_separately) :-
+    {X*Y =:= 6},
+    {A + B =:= 1},
+    copy_term(f(X,Y,A,B), _, Gs),
+    assertion(Gs = [{_},{_}]).
 test(alias_delayed_variables, [nondet]) :-
     {X*Y =:= 6},
     X = Y,
@@ -1247,14 +1258,6 @@ test(ordering_conflicts_with_dump, throws(unsatisfiable_ordering)) :-
     {X + Y =:= 1},
     ordering([Y,X]),
     dump([X,Y], [x,y], _).
-
-test(nonlinear_residuals_are_duplicated) :-
-    % attribute_goals//1 deletes the clpqr_itf attribute of reported
-    % variables but not clpqr_geler, so a purely non-linear store is
-    % reported once per variable.  Should be a single goal.
-    {X*Y =:= 6},
-    copy_term(X-Y, _, Gs),
-    assertion(Gs = [_,_]).
 
 test(waking_leaves_choicepoint, [nondet]) :-
     % geler.pl's attr_unify_hook/2 has a catch-all second clause, and

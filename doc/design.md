@@ -759,11 +759,6 @@ behaviour first.  Tests that encode a *wrong* answer are marked in the suite.
 
 ### 14.1 Dead code that changes behaviour
 
-* `clpq/bv_q.pl:1271`, `clpr/bv_r.pl:1296` — `pivot/2` reads
-  `arg(5,AttI,class(Class))` where argument 5 is `order(Ord)`.  `pivot/2` is
-  currently unreachable (only `pivot/5` is called), so this is latent.
-* `clpqr/redund.pl:85` — the first clause of `redundancy_vars/1` is `!`, so
-  the second (timing) clause is dead.  Harmless, but misleading.
 * `clpq/nf_q.pl:868`, `clpr/nf_r.pl:929` — `nf_power_pos/3` is superseded by
   `binom/3` and no longer called.
 * `clpqr_itf` argument 7 is never read or written.
@@ -777,10 +772,15 @@ suite consequently cannot reach:
 | `solve_x/2`, `solve_x/6` | `bv_*.pl` (superseded by `solve_ord_x/3`) |
 | `iterate_inc/2` | `bv_*.pl` (only `iterate_dec/2` is used) |
 | `basis/2`, `basis_drop/1` | `bv_*.pl` |
-| `pivot/2` | `bv_*.pl` (and buggy, see above) |
+| `pivot/2` | `bv_*.pl` |
 | `nf_power_pos/3` | `nf_*.pl` |
 | `l2conj/2`, `nonexhausted//1` | `clpqr/geler.pl` |
 | `red_t_l/0`, `red_t_L/0`, `red_t_U/0` | `clpqr/redund.pl` (profiling hooks) |
+
+`pivot/2` additionally read `arg(5,AttI,class(Class))` where argument 5 is
+`order(Ord)`, so it could never have worked had it been called; that is
+fixed.  `redundancy_vars/1` had an unreachable second clause behind a cut
+which printed timings; it has been removed.
 
 `projecting_assert/1` in `clpqr/dump.pl` is exported by that module but
 commented out of the `clpq`/`clpr` export lists, so it is only reachable as

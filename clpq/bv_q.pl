@@ -1268,7 +1268,7 @@ pivot(Dep,Indep) :-
 	arg(5,AttD,order(OrdDep)),
 	get_attr(Indep,clpqr_itf,AttI),
 	arg(5,AttI,order(Ord)),
-	arg(5,AttI,class(Class)),
+	arg(6,AttI,class(Class)),
 	delete_factor(Ord,H,H0,Coeff),
 	K is -1 rdiv Coeff,
 	add_linear_ff(H0,K,[0,0,l(Dep* -1,OrdDep)],K,Lin),

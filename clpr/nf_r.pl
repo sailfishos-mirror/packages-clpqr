@@ -686,9 +686,9 @@ monash_constant(X,_) :-
 	var(X),
 	!,
 	fail.
-monash_constant(p,3.14259265).
-monash_constant(pi,3.14259265).
-monash_constant(e,2.71828182).
+monash_constant(p,X)  :- X is pi.
+monash_constant(pi,X) :- X is pi.
+monash_constant(e,X)  :- X is e.
 monash_constant(zero,1.0e-10).
 
 %

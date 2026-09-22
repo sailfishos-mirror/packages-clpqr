@@ -771,10 +771,6 @@ entered: the first clause of `ineq/4` and the first clause of
 
 ### 14.2 Wrong results
 
-* **`#(pi)` is wrong.**  `clpr/nf_r.pl:689-690` define
-  `monash_constant(p, 3.14259265)` and `monash_constant(pi, 3.14259265)`.
-  The correct value is `3.14159265`; the digits `1` and `2` are transposed.
-  The error is about 3×10⁻³, far larger than the solver's own epsilon.
 * **Exponent inversion in CLP(Q) is inexact.**  `clpq/nf_q.pl:504` computes
   `rational(log(A)) rdiv rational(log(Kb))`, i.e. it takes the *exact*
   rational value of two floats.  `{X =:= 8}, {X =:= 2^Y}` yields

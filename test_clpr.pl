@@ -155,9 +155,15 @@ test(fractional_power) :-
 
 % Symbolic "Monash" constants; CLP(R) only.
 
+test(constant_pi) :-
+    {X =:= #(pi)},
+    assertion(near(X, pi)).
+test(constant_p) :-
+    {X =:= #(p)},
+    assertion(near(X, pi)).
 test(constant_e) :-
     {X =:= #(e)},
-    assertion(near(X, 2.71828182)).
+    assertion(near(X, e)).
 test(constant_zero) :-
     {X =:= #(zero)},
     assertion(near(X, 1.0e-10)).
@@ -1139,17 +1145,6 @@ test(newton_sqrt2) :-
 :- begin_tests(clpr_known_issues).
 
 % See doc/design.md, section 14.
-
-test(pi_is_wrong) :-
-    % monash_constant(pi, 3.14259265) in clpr/nf_r.pl transposes two digits;
-    % the value should be 3.14159265.
-    {X =:= #(pi)},
-    assertion(near(X, 3.14259265)),
-    assertion(abs(X - pi) > 9.0e-4).     % off by 1.0e-3
-
-test(p_is_wrong) :-
-    {X =:= #(p)},
-    assertion(near(X, 3.14259265)).
 
 test(ordering_before_constraints_is_a_noop) :-
     ordering([X,Y]),

@@ -137,7 +137,7 @@ entailed exactly when adding its negation makes the store unsatisfiable.  It
 therefore never changes the store.
 
 `inf/2` and `sup/2` do not change the store either — the extremal vertex is
-reached by pivoting, the value is captured in a global variable and the pivots
+reached by pivoting, the value is captured in a mutable term and the pivots
 are then undone by backtracking.  `minimize/1`/`maximize/1` exist separately
 (rather than as `inf(E,E)`) precisely because they *do* want to stay at the
 optimal vertex; see the long comment above `minimize/1` in `bv_q.pl`.
@@ -575,9 +575,9 @@ back rational.
    choosing the bound that makes `R` as small as possible;
 3. `iterate_dec/2` repeatedly calls `dec_step/2` until it reports `optimum`,
    at which point the infimum is `R + I`;
-4. stores `[Inf|Vertex]` in a global variable and **fails**, undoing every
-   pivot;
-5. the second clause reads the global back and posts `{Inf =:= Value}`.
+4. stores `[Inf|Vertex]` with `nb_setarg/3` in a term local to the call and
+   **fails**, undoing every pivot;
+5. the second branch reads that term back and posts `{Inf =:= Value}`.
 
 If any variable of the row has `type(t_none)`, `determine_active_dec/1` fails
 and so does `inf/2` — an unbounded expression has no infimum.  `sup/2` is
@@ -821,7 +821,24 @@ first clause of `ineq_cases/6` in `ineq_*.pl`.
 
 ### 14.2 Wrong results
 
-
+* `#(pi)` and `#(p)` were `3.14259265`: two digits of pi transposed, an error
+  of 1.0e-3 where the solver's own epsilon is 1.0e-10.
+* Inverting `A = B^X` computed `rational(log(A)) rdiv rational(log(Kb))`, the
+  *exact* rational value of two floats, so `{8 =:= 2^Y}` bound `Y` to
+  `18729944304496076r6243314768165359` rather than `3`.
+* A store holding nothing but delayed non-linear goals was reported once per
+  variable, because `attribute_goals//1` removed only the `clpqr_itf`
+  attribute of the variables it had reported and such a variable has none.
+* A `minimize/1`, `inf/2` or `bb_inf/3` still waiting for its expression to
+  become linear put the solver's own continuation inside the `{}/1` residual,
+  so the answer of `copy_term/3` raised a type error when called.
+* `bb_inf/3,4,5` kept its incumbent in the global variable `prov_opt`, and
+  `inf/2,4` (hence `sup/2,4` and `minimize/1`) kept its optimum in the global
+  `inf`.  Global variables share one namespace with the calling program, so
+  both destroyed a caller's variable of that name, and nested calls would
+  have interfered.
+* CLP(Q) did not implement the documented isolating axiom for `X = Y^Z`, so
+  `{8 =:= Y^3}` reported success with `Y` unbound.
 
 ### 14.3 `ordering/1`
 

@@ -631,6 +631,17 @@ test(strict_bound_infimum) :-
     {X > 1, X =< 5},
     inf(X, I),
     assertion(I == 1).
+test(does_not_touch_global_variables) :-
+    % the optimum used to be carried across in the global variable `inf'
+    nb_setval(inf, mine),
+    {X >= 1, X =< 5},
+    inf(X, I),
+    assertion(I == 1),
+    sup(X, S),
+    assertion(S == 5),
+    nb_getval(inf, V),
+    assertion(V == mine),
+    nb_delete(inf).
 test(inf_waits_for_linear, [nondet]) :-
     {X*Y >= 3},
     {X =:= 1},

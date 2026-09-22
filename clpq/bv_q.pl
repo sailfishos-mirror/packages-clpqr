@@ -366,18 +366,24 @@ inf(Expression,Inf,Vector,Vertex) :-
 	% in normal form
 	wait_linear(Expression,Nf,inf_lin(Nf,Inf,Vector,Vertex)).
 
-inf_lin(Lin,_,Vector,_) :-
-	deref(Lin,Lind),
-	var_with_def_intern(t_none,Dep,Lind,0),	% make new variable Dep = Lind
-	determine_active_dec(Lind),	% minimizes Lind
-	iterate_dec(Dep,Inf),
-	vertex_value(Vector,Values),
-	nb_setval(inf,[Inf|Values]),
-	fail.
-inf_lin(_,Infimum,_,Vertex) :-
-	nb_current(inf,L),
-	nb_delete(inf),
-	assign([Infimum|Vertex],L).
+% The optimum is found by pivoting and then thrown away again by the
+% failure driven loop, which undoes those pivots.  It is carried across in
+% a mutable term local to this call rather than in a global variable, which
+% would clobber a global of the same name in the calling program.
+
+inf_lin(Lin,Infimum,Vector,Vertex) :-
+	State = state(none),
+	(   deref(Lin,Lind),
+	    var_with_def_intern(t_none,Dep,Lind,0),	% make new variable Dep = Lind
+	    determine_active_dec(Lind),	% minimizes Lind
+	    iterate_dec(Dep,Inf),
+	    vertex_value(Vector,Values),
+	    nb_setarg(1,State,[Inf|Values]),
+	    fail
+	;   arg(1,State,L),
+	    L = [_|_],
+	    assign([Infimum|Vertex],L)
+	).
 
 % assign(L1,L2)
 %

@@ -604,6 +604,14 @@ test(lp_diet) :-
 test(unbounded_inf_fails, fail) :-
     {X >= 0},
     inf(-X, _).
+test(does_not_touch_global_variables) :-
+    nb_setval(inf, mine),
+    {X >= 1, X =< 5},
+    inf(X, I),
+    assertion(near(I, 1.0)),
+    nb_getval(inf, V),
+    assertion(V == mine),
+    nb_delete(inf).
 test(inf_waits_for_linear, [nondet]) :-
     {X*Y >= 3},
     {X =:= 1},

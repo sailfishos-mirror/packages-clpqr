@@ -23,6 +23,7 @@ completely untested.
 * [13. CLP(Q) versus CLP(R)](#13-clpq-versus-clpr)
 * [14. Known problems](#14-known-problems)
 * [15. Testing](#15-testing)
+* [16. Working on this code](#16-working-on-this-code)
 
 
 ## 1. Provenance and literature
@@ -896,6 +897,34 @@ reproduced as tests in `test_clpr.pl`.
   which spreads the message over the first two arguments of the formal
   term.  It prints correctly, so it is left alone.
 
+### 14.6 Still open
+
+These are left alone deliberately, because fixing them is a decision about
+the interface rather than a repair:
+
+* **Division by zero fails silently.**  `nf_div/3` calls `zero_division/0`,
+  which is `fail` with the author's comment `% raise_exception(_) ?`, so
+  `{X =:= 1/0}` just fails where `is/2` would raise
+  `evaluation_error(zero_divisor)`.  Either behaviour is defensible — "no
+  solution" versus "undefined" — and changing it would break programs that
+  rely on the failure.
+* **`dump/3` requires unbound targets.**  `{X = 1}, dump([X],[y],L)` raises
+  `uninstantiation_error(1)`, although `X` is exactly the kind of variable a
+  user would want to dump.  What it should return instead (`[y = 1]`?
+  `[]`?) is an interface decision.
+* **Answers can mention fresh slack variables.**  `{X+Y >= 1}` prints
+  `{Y=1-X+_A, _A>=0}`.  This is inherent to how `ineq_more/2` introduces
+  slack variables and is documented in the SWI-Prolog manual.
+* **`library(clpq)` and `library(clpr)` cannot both be imported into one
+  module**, since they export the same names.  The manual's "It is allowed to
+  use both libraries in one program" is true only with explicit module
+  qualification.
+* **Waking a delayed goal always leaves a choice point**, because
+  `clpqr/geler.pl`'s `attr_unify_hook/2` has a catch-all second clause and
+  `run/2` has two clauses.  Roughly a tenth of the tests carry `[nondet]`
+  because of it.  Cutting where the wake-up is deterministic would be a
+  performance fix, not a correctness one.
+
 
 ## 15. Testing
 
@@ -975,3 +1004,140 @@ To find these, ask `library(prolog_coverage)` for annotated sources
 (`annotate(true), line_numbers(true)`): each clause is prefixed with its
 entry/exit counts, `###` marking a clause that was never entered and `--`
 one that was entered but never exited.
+
+
+## 16. Working on this code
+
+What the repairs in §14 taught, in the order it is likely to bite.
+
+### Every fix is two fixes
+
+`clpq/` and `clpr/` are not generated from a common source; they are
+independent copies that have drifted for twenty years.  A defect in one is
+usually, but not always, present in the other, and the *shape* of the drift
+is not predictable:
+
+* `{}/1` on an unbound argument raised a malformed exception in CLP(Q) and a
+  well-formed one in CLP(R); for `entailed/1` it was the other way round.
+* CLP(R) grew four `submit_eq_c1/3` clauses for root extraction long after
+  the port; CLP(Q) never got them.
+* `bb_better_bound/1` read its global with `nb_current/2` in Q and
+  `catch(nb_getval(...),_,true)` in R, with subtly different behaviour when
+  no incumbent exists yet.
+
+So: after changing one, diff the two.  Normalising the module suffixes and
+`rdiv`/`/` makes the diff readable:
+
+```bash
+sed -e 's/_q\b/_X/g; s/clpq/clpZ/g; s/ rdiv / \/ /g' clpq/bv_q.pl >/tmp/q
+sed -e 's/_r\b/_X/g; s/clpr/clpZ/g'                   clpr/bv_r.pl >/tmp/r
+diff -u /tmp/q /tmp/r
+```
+
+### The build caches `.qlf`, and the staleness lies to you
+
+The library is installed into `build/home/library/ext/clpqr/` as symlinks
+with `.qlf` files beside them.  When a change appears to have no effect, or
+produces something impossible like
+
+```
+Warning: Local definition of clpr:ordering/1 overrides weak import from clpqr_ordering
+Warning: Redefined static procedure clpqr_ordering:ordering/1
+ERROR:   existence_error(procedure, clpr:ordering/1)
+```
+
+the `.qlf` files are stale.  Run `swipl -Dsource` to bypass them, or delete
+them and let `ninja` rebuild.  Both of those warnings vanished the moment the
+caches went; nothing was wrong with the source.
+
+### Predicates are called for side effects unrelated to their name
+
+`dump/3` called `ordering(Target)` on its target list.  It looks like a
+presentation choice, and removing it is the obvious way to stop it
+overriding the user's `ordering/1` — but it also *interned* the target
+variables, which is what lets `nonlin_crux/2` reach their delayed goals.
+Removing it silently emptied the residual goals of every purely non-linear
+store.  The replacement, `intern_vars/1`, keeps the side effect and drops the
+edges.
+
+Expect more of this.  When removing a call here, check what it does to the
+attributes, not just what its name says.
+
+### `term_attvars/2` reaches through attributes
+
+`attribute_goals//1` calls `term_attvars(V, Vs)`, and `Vs` contains not only
+the constrained variables but the *class identity variable*, which carries
+only a `clpqr_class` attribute and belongs to no solver.  Anything walking
+that list has to tolerate variables it cannot classify.  That is why
+`intern_vars/1` is total where `join_class/3` fails, and why `dump/3` used to
+fail outright on an unconstrained target.
+
+### The manual is the specification; use its worked examples
+
+Reading the code cannot tell you which way round `arrange_pivot/1` should
+compare, because either direction is internally consistent.  TR-95-09's
+"Variable Ordering" section settles it in one sentence — *"Suppose that
+instead of B, you want Mp to be the defined variable"* — and its four worked
+mortgage answers, reproduced verbatim in `test_clpr.pl`, are what finally
+showed that the port had the direction inverted *and* that `dump/3` was
+overriding the user.  When changing anything about projection, run those
+four first.
+
+### Exact arithmetic is a feature of CLP(Q), not an obstacle
+
+SWI-Prolog's `(**)/2` returns an exact rational whenever the root is
+rational and a float otherwise, so `rational/1` on the result is a decision
+procedure for "does this root exist in Q":
+
+```prolog
+exact_root(P,V,R) :-
+	catch(R is V**(1 rdiv P), _, fail),
+	rational(R),
+	R**P =:= V.
+```
+
+That is the whole of CLP(Q)'s root extraction.  Conversely, `rational/1` on
+a *float* is almost always a bug — it gives the exact value of the
+approximation, which is how `{8 =:= 2^Y}` came to answer
+`18729944304496076r6243314768165359`.  `rationalize/1` is nearly always what
+was meant.
+
+### State that must survive backtracking but not the call
+
+Three places need this: `dump/3`, `inf/2` and `bb_inf/3`.  The idiom is a
+mutable term local to the call, updated with `nb_setarg/3` and read after a
+failure-driven loop:
+
+```prolog
+	State = state(none),
+	(   ...,
+	    nb_setarg(1, State, Value),
+	    fail
+	;   arg(1, State, Value)
+	)
+```
+
+Both `bb_inf/3` and `inf/2` used global variables instead — `prov_opt` and
+`inf` — which share one namespace with the calling program, so they
+destroyed a caller's variable of that name.  `inf/2`'s was only noticed while
+writing this section, which is a fair illustration of how the two copies and
+the two optimisers hide the same defect from each other.
+
+### Writing tests here
+
+* `assertion/1` does not keep bindings — it is `\+ \+ Goal`.  Match the shape
+  of an answer with plain unification first, then `assertion/1` the numbers:
+
+  ```prolog
+      dump([X], [x], C),
+      C = [x >= L, x =< U],
+      assertion(near(L, 1.0)).
+  ```
+* In CLP(R), compare with a tolerance (`near/2` in `test_clpr.pl`), never
+  `==`.  `{X =:= 3}` gives `3.0`, and `1/3` is not `0.3333333333333333` under
+  `==`.
+* Expect choice points (see §14.6); mark those tests `[nondet]` rather than
+  adding cuts to the solver.
+* `_X` used twice in one clause draws a "singleton-marked variable appears
+  more than once" warning.  Use a normal name; two occurrences are not a
+  singleton.

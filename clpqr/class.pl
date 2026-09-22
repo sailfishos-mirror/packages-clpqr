@@ -43,7 +43,6 @@
 	    class_basis_add/3,
 	    class_basis_drop/2,
 	    class_basis_pivot/3,
-	    class_get_clp/2,
 	    class_get_prio/2,
 	    class_put_prio/2
 	  ]).
@@ -72,9 +71,6 @@ class_new(Class,CLP,All,AllT,Basis) :-
 
 class_get_prio(Class,Priority) :-
 	get_attr(Class,clpqr_class,class(_,_,_,_,Priority)).
-
-class_get_clp(Class,CLP) :-
-	get_attr(Class,clpqr_class,class(CLP,_,_,_,_)).
 
 class_put_prio(Class,Priority) :-
 	get_attr(Class,clpqr_class,class(CLP,All,AllT,Basis,_)),

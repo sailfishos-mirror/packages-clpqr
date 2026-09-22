@@ -372,9 +372,9 @@ Bindings are collected and applied at the very end (`export_binding/1`) rather
 than during back-substitution, because binding a variable in the middle of the
 traversal would trigger `attr_unify_hook/2` re-entrantly.
 
-`solve_x/2` and `solve_ord_x/3` are variants that solve for a *given*
-variable; they are used by the unification hook, which must eliminate the
-variable that is about to be bound.
+`solve_ord_x/3` is a variant that solves for a *given* variable; it is used
+by the unification hook, which must eliminate the variable that is about to
+be bound.
 
 
 ## 7. The inequality solver
@@ -781,37 +781,43 @@ behaviour first.  Tests that encode a *wrong* answer are marked in the suite.
 
 ### 14.1 Dead code that changes behaviour
 
-* `clpq/nf_q.pl:868`, `clpr/nf_r.pl:929` — `nf_power_pos/3` is superseded by
-  `binom/3` and no longer called.
-* `clpqr_itf` argument 7 is never read or written.
+The following predicates had no caller at all and have been removed, together
+with the comments and the commented-out call sites that referred to them:
 
-Further predicates that are defined but have no caller, and which the test
-suite consequently cannot reach:
+| Predicate | File | Note |
+| --- | --- | --- |
+| `'solve_='/1` | `bv_*.pl` | `nf_*.pl` calls `solve/1` directly |
+| `solve_x/2`, `solve_x/6` | `bv_*.pl` | superseded by `solve_ord_x/3` |
+| `iterate_inc/2` | `bv_*.pl` | only `iterate_dec/2` is used |
+| `basis/2`, `basis_drop/1` | `bv_*.pl` | thin wrappers over `class.pl` |
+| `pivot/2` | `bv_*.pl` | and it read the class from the order field |
+| `nf_power_pos/3` | `nf_*.pl` | superseded by `binom/3` |
+| `integerp/1` | `nf_r.pl` | only `integerp/2` is used |
+| `l2conj/2`, `nonexhausted//1` | `clpqr/geler.pl` | |
+| `class_get_clp/2` | `clpqr/class.pl` | exported, never imported |
+| `projecting_assert/1`, `l2c/2` | `clpqr/dump.pl` | see below |
 
-| Predicate | File |
-| --- | --- |
-| `'solve_='/1` | `bv_*.pl` (`nf_*.pl` calls `solve/1` directly) |
-| `solve_x/2`, `solve_x/6` | `bv_*.pl` (superseded by `solve_ord_x/3`) |
-| `iterate_inc/2` | `bv_*.pl` (only `iterate_dec/2` is used) |
-| `basis/2`, `basis_drop/1` | `bv_*.pl` |
-| `pivot/2` | `bv_*.pl` |
-| `nf_power_pos/3` | `nf_*.pl` |
-| `l2conj/2`, `nonexhausted//1` | `clpqr/geler.pl` |
-| `red_t_l/0`, `red_t_L/0`, `red_t_U/0` | `clpqr/redund.pl` (profiling hooks) |
+`projecting_assert/1` asserted a clause with the constraints on its variables
+attached.  It was exported by `clpqr_dump` but commented out of the `clpq` and
+`clpr` export lists, so it was reachable only as
+`clpqr_dump:projecting_assert/1`; it is not in TR-95-09; and it was broken —
+`( Sm = clpq ; Sm = clpr ), !` always chose `clpq` whichever solver the
+clause actually belonged to.  It has been removed rather than repaired,
+because nothing says what it should do for CLP(R).
 
-`pivot/2` additionally read `arg(5,AttI,class(Class))` where argument 5 is
-`order(Ord)`, so it could never have worked had it been called; that is
-fixed.  `redundancy_vars/1` had an unreachable second clause behind a cut
-which printed timings; it has been removed.
+`redundancy_vars/1` had an unreachable second clause behind a cut which
+printed timings; that too is gone.  The `red_t_l/0`, `red_t_u/0`, `red_t_L/0`
+and `red_t_U/0` facts in `clpqr/redund.pl` *are* called, from `redundant/3`;
+they are deliberate no-op probes for counting redundant bounds and are kept.
 
-`projecting_assert/1` in `clpqr/dump.pl` is exported by that module but
-commented out of the `clpq`/`clpr` export lists, so it is only reachable as
-`clpqr_dump:projecting_assert/1`.
+Argument 7 of the `clpqr_itf` attribute is still never read or written.  It
+is left in place: renumbering the other ten would touch every `arg/3` and
+`setarg/3` call in the package for no gain.
 
-Two more clauses look unreachable from `{}/1`, because `submit_lt_c/3` and
-`submit_le_c/3` handle the single-variable case before the solver is
-entered: the first clause of `ineq/4` and the first clause of
-`ineq_cases/6` in `ineq_*.pl`.
+Two clauses look unreachable from `{}/1` but are kept, because the argument
+rests on how `submit_lt_c/3` and `submit_le_c/3` filter the single-variable
+case rather than on anything local: the first clause of `ineq/4` and the
+first clause of `ineq_cases/6` in `ineq_*.pl`.
 
 ### 14.2 Wrong results
 
@@ -908,21 +914,23 @@ Coverage is measured with `library(prolog_coverage)`:
 ?- coverage((test_clpq, test_clpr), [dir('cov'), annotate(true)]).
 ```
 
-Clause coverage of the solver as of writing (242 CLP(Q) tests + 229 CLP(R)
-tests):
+Clause coverage of the solver as of writing (276 CLP(Q) tests + 248 CLP(R)
+tests), after the dead code of §14.1 was removed:
 
 | File | Clauses | % covered |
 | --- | --- | --- |
 | `clpqr/project.pl` | 36 | 94 |
 | `clpq/store_q.pl`, `clpr/store_r.pl` | 38 | 92 |
-| `clpq/nf_q.pl` | 199 | 89 |
-| `clpr/nf_r.pl` | 211 | 87 |
+| `clpq/nf_q.pl` | 207 | 89 |
+| `clpqr/dump.pl` | 28 | 89 |
+| `clpr/nf_r.pl` | 212 | 87 |
+| `clpqr/class.pl` | 15 | 87 |
 | `clpqr/itf.pl` | 14 | 86 |
+| `clpr/bb_r.pl` | 25 | 84 |
+| `clpr/bv_r.pl` | 187 | 83 |
+| `clpq/bv_q.pl` | 186 | 83 |
 | `clpq/fourmotz_q.pl` | 71 | 83 |
-| `clpqr/dump.pl` | 28 | 82 |
-| `clpqr/class.pl` | 16 | 81 |
-| `clpr/bb_r.pl` | 26 | 81 |
-| `clpq/bv_q.pl`, `clpr/bv_r.pl` | 194/195 | 80 |
+| `clpqr/geler.pl` | 15 | 80 |
 | `clpr/fourmotz_r.pl` | 71 | 79 |
 | `clpq/itf_q.pl` | 34 | 77 |
 | `clpqr/ordering.pl` | 28 | 75 |
@@ -930,22 +938,21 @@ tests):
 | `clpq/bb_q.pl` | 25 | 72 |
 | `clpq/ineq_q.pl` | 100 | 70 |
 | `clpr/ineq_r.pl` | 100 | 69 |
-| `clpqr/geler.pl` | 18 | 67 |
-| `clpqr/redund.pl` | 35 | 57 |
+| `clpqr/redund.pl` | 34 | 59 |
+| `clpq.pl`, `clpr.pl` | 10 | 50 |
 
 What is left uncovered is, in decreasing order of size:
 
-1. Code that is structurally unreachable — see the table in §14.1.  This
-   accounts for most of the gap in `bv_*.pl` and `clpqr/geler.pl`.
-2. The `sandbox:safe_primitive/1` facts, which are declarations rather than
-   executable clauses.
-3. Bound-update clauses in `ineq_*.pl` and redundancy clauses in
+1. Bound-update clauses in `ineq_*.pl` and redundancy clauses in
    `clpqr/redund.pl` that only trigger for particular combinations of active
    bound and strictness (`t_L`, `t_Lu`, `t_lU`, `t_U`).  These are reachable
    in principle; each needs a simplex state that is awkward to construct from
    the outside.
-4. `narrow_u/3`, `narrow_l/3` and the `inc_step_2*` clauses in `bv_*.pl`,
+2. `narrow_u/3`, `narrow_l/3` and the `inc_step_2*` clauses in `bv_*.pl`,
    which need a basic variable whose optimum lies strictly inside its bound.
+3. The `sandbox:safe_primitive/1` facts, which are declarations rather than
+   executable clauses, and the `prolog:message//1` clauses of `clpq.pl` and
+   `clpr.pl` that only the interactive toplevel reaches.
 
 To find these, ask `library(prolog_coverage)` for annotated sources
 (`annotate(true), line_numbers(true)`): each clause is prefixed with its

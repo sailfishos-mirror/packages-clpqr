@@ -37,8 +37,7 @@
 
 
 :- module(clpqr_dump,
-	  [ dump/3,
-	    projecting_assert/1
+	  [ dump/3
 	  ]).
 :- use_module(class, [class_allvars/2]).
 :- use_module(geler, [collect_nonlin/3]).
@@ -60,24 +59,6 @@ dump([],[],[]) :- !.
 dump(Target,NewVars,Constraints) :-
 	must_be(list(var), Target),
 	copy_term_clpq(Target, NewVars, Constraints).
-
-:- meta_predicate projecting_assert(:).
-
-projecting_assert(Module:Clause) :-
-	copy_term_clpq(Clause,Copy,Constraints),
-	l2c(Constraints,Conj),			% fails for []
-	(   Sm = clpq
-	;   Sm = clpr
-	),			% proper module for {}/1
-	!,
-	(   Copy = (H:-B)
-	->  % former rule
-	    assert(Module:(H:-Sm:{Conj},B))
-	;   % former fact
-	    assert(Module:(Copy:-Sm:{Conj}))
-	).
-projecting_assert(Clause) :-	% not our business
-	assert(Clause).
 
 copy_term_clpq(Term,Copy,Constraints) :-
 	copy_term_clpq(Term,Copy,Constraints,_Pending).
@@ -107,17 +88,6 @@ copy_term_clpq_(Term, Copy, Constraints, Pending) :-
 	related_linear_vars(Target,Again),	 % project drops/adds vars
 	all_attribute_goals(Again,Gs,Nonlin),
 	copy_term_nat(Term/Gs/Goals,Copy/Constraints/Pending). % strip constraints
-
-% l2c(Lst,Conj)
-%
-% converts a list to a round list: [a,b,c] -> (a,b,c) and [a] becomes a
-
-l2c([X|Xs],Conj) :-
-	(   Xs = []
-	->  Conj = X
-	;   Conj = (X,Xc),
-	    l2c(Xs,Xc)
-	).
 
 % related_linear_vars(Vs,All)
 %

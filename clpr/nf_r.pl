@@ -245,7 +245,6 @@ submit_eq_c(A,B,Rest) :-	% c2
 	linear(Rest),
 	!,
 	Hom = [A,B|Rest],
-	% 'solve_='(Hom).
 	nf_length(Hom,0,Len),
 	log_deref(Len,Hom,[],HomD),
 	solve(HomD).
@@ -332,7 +331,6 @@ submit_eq_c1(Rest,B,I) :-
 	var(Y),
 	linear(Rest),
 	!,
-	% 'solve_='( [v(I,[]),B|Rest]).
 	Hom = [B|Rest],
 	nf_length(Hom,0,Len),
 	normalize_scalar(I,Nonvar),
@@ -912,27 +910,14 @@ nf_power(N,Sum,Norm) :-
 	compare(Rel,N,0),
 	(   Rel = (<)
 	->  Pn is -N,
-	    % nf_power_pos(Pn,Sum,Inorm),
 	    binom(Sum,Pn,Inorm),
 	    nf_div(Inorm,[v(1.0,[])],Norm)
 	;   Rel = (>)
-	->  % nf_power_pos(N,Sum,Norm)
-	    binom(Sum,N,Norm)
+	->  binom(Sum,N,Norm)
 	;   Rel = (=)
 	->  % 0^0 is indeterminate but we say 1
 	    Norm = [v(1.0,[])]
 	).
-%
-% N>0
-%
-% iterative method: X^N = X*(X^N-1)
-nf_power_pos(1,Sum,Norm) :-
-	!,
-	Sum = Norm.
-nf_power_pos(N,Sum,Norm) :-
-	N1 is N-1,
-	nf_power_pos(N1,Sum,Pn1),
-	nf_mul(Sum,Pn1,Norm).
 %
 % N>0
 %
@@ -1202,9 +1187,6 @@ pending_goal(bb_r:bb_inf_internal(Is,_,Eps,Inf,Vertex),Term) -->
 	!,
 	[clpr:bb_inf(Is,Term,Inf,Vertex,Eps)].
 pending_goal(_,_) --> [].
-
-integerp(X) :-
-	floor(X)=:=X.
 
 integerp(X,I) :-
 	floor(X)=:=X,

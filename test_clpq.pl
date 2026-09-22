@@ -669,6 +669,22 @@ test(ground_noninteger_fails, fail) :-
 test(unbounded_fails, fail) :-
     {X >= 0},
     bb_inf([X], -X, _).
+test(does_not_touch_global_variables) :-
+    % the incumbent used to live in the global variable `prov_opt'
+    nb_setval(prov_opt, mine),
+    {X >= 1r2, X =< 7r2},
+    bb_inf([X], X, I),
+    assertion(I == 1),
+    nb_getval(prov_opt, V),
+    assertion(V == mine),
+    nb_delete(prov_opt).
+test(nested_calls_do_not_interfere) :-
+    {X >= 1r2, X =< 7r2},
+    {Y >= 5r2, Y =< 9r2},
+    bb_inf([X], X, I1),
+    bb_inf([Y], Y, I2),
+    bb_inf([X], X, I3),
+    assertion([I1,I2,I3] == [1,3,1]).
 
 :- end_tests(clpq_bb).
 

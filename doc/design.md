@@ -598,9 +598,9 @@ over the LP relaxation:
 * when every integer variable is integral the incumbent is replaced
   (`nb_setval(prov_opt, …)`), and the whole search is driven by failure.
 
-The incumbent lives in a *global variable*, not in the search state, so the
-pruning survives backtracking.  This also means `bb_inf/3,4,5` is not
-reentrant: a nested call would clobber `prov_opt`.
+The incumbent has to survive the backtracking that drives the search but must
+not survive the call, so it lives in a mutable term local to the call,
+updated with `nb_setarg/3` — the same idiom `dump/3` uses.
 
 In CLP(R) the extra `Eps` argument says how far from an integer a value may
 be and still count as integral; `bb_inf/3` uses `0.001`.  CLP(Q) needs no such
@@ -851,8 +851,6 @@ reproduced as tests in `test_clpr.pl`.
 
 ### 14.5 Robustness
 
-* `bb_inf/3,4,5` uses the non-backtrackable global variable `prov_opt` and is
-  therefore not reentrant and not thread-safe with respect to itself.
 * Exceptions thrown by the solver mostly use ad-hoc terms
   (`instantiation_error(Goal,Arg)`,
   `permission_error('mix CLP(Q) variables with','CLP(R) variables:',X)`)

@@ -658,6 +658,14 @@ test(ground_noninteger_fails, fail) :-
 test(unbounded_fails, fail) :-
     {X >= 0},
     bb_inf([X], -X, _).
+test(does_not_touch_global_variables) :-
+    nb_setval(prov_opt, mine),
+    {X >= 0.5, X =< 3.5},
+    bb_inf([X], X, I),
+    assertion(near(I, 1.0)),
+    nb_getval(prov_opt, V),
+    assertion(V == mine),
+    nb_delete(prov_opt).
 test(bounds_are_narrowed_to_integers) :-
     % bb_intern/4 first narrows the *bounds* of each integer variable to
     % enclosing integers, independently of Eps

@@ -81,32 +81,37 @@ bb_inf(Is,Term,Inf,Vertex) :-
 % Finds an infimum <Inf> for linear expression in normal form <Lin>, where
 % all variables in <Is> are to be integers.
 
-bb_inf_internal(Is,Lin,_,_) :-
-	bb_intern(Is,IsNf),
-	nb_delete(prov_opt),
-	repair(Lin,LinR),	% bb_narrow ...
-	deref(LinR,Lind),
-	var_with_def_assign(Dep,Lind),
-	determine_active_dec(Lind),
-	bb_loop(Dep,IsNf),
-	fail.
-bb_inf_internal(_,_,Inf,Vertex) :-
-	nb_current(prov_opt,InfVal-Vertex),
-	{Inf =:= InfVal},
-	nb_delete(prov_opt).
+% The incumbent must survive the backtracking that drives the search, but
+% it must not survive the call itself.  It is therefore kept in a mutable
+% term that is local to this call rather than in a global variable, which
+% would clobber a global of the same name in the calling program and would
+% make nested calls interfere.
 
-% bb_loop(Opt,Is)
+bb_inf_internal(Is,Lin,Inf,Vertex) :-
+	State = state(none),
+	(   bb_intern(Is,IsNf),
+	    repair(Lin,LinR),	% bb_narrow ...
+	    deref(LinR,Lind),
+	    var_with_def_assign(Dep,Lind),
+	    determine_active_dec(Lind),
+	    bb_loop(Dep,IsNf,State),
+	    fail
+	;   arg(1,State,InfVal-Vertex),
+	    {Inf =:= InfVal}
+	).
+
+% bb_loop(Opt,Is,State)
 %
 % Minimizes the value of Opt where variables Is have to be integer values.
 
-bb_loop(Opt,Is) :-
+bb_loop(Opt,Is,State) :-
 	bb_reoptimize(Opt,Inf),
-	bb_better_bound(Inf),
+	bb_better_bound(State,Inf),
 	vertex_value(Is,Ivs),
 	(   bb_first_nonint(Is,Ivs,Viol,Floor,Ceiling)
 	->  bb_branch(Viol,Floor,Ceiling),
-	    bb_loop(Opt,Is)
-	;   nb_setval(prov_opt,Inf-Ivs) % new provisional optimum
+	    bb_loop(Opt,Is,State)
+	;   nb_setarg(1,State,Inf-Ivs) % new provisional optimum
 	).
 
 % bb_reoptimize(Obj,Inf)
@@ -122,14 +127,16 @@ bb_reoptimize(Obj,Inf) :-
 	nonvar(Obj),
 	Inf = Obj.
 
-% bb_better_bound(Inf)
+% bb_better_bound(State,Inf)
 %
 % Checks if the new infimum Inf is better than the previous one (if such exists).
 
-bb_better_bound(Inf) :-
-	nb_current(prov_opt,Inc-_), !,
-	Inf < Inc.
-bb_better_bound(_).
+bb_better_bound(State,Inf) :-
+	arg(1,State,Best),
+	(   Best = Inc-_
+	->  Inf < Inc
+	;   true
+	).
 
 % bb_branch(V,U,L)
 %

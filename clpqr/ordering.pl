@@ -92,6 +92,7 @@ ordering(CLP,A<B) :-
 	!,
 	add_edges([],[A-B],Gb),
 	combine(Ga,Gb,Gc),
+	check_acyclic(Gc,A<B),
 	class_put_prio(Class,Gc).
 ordering(CLP,Pb) :-
 	Pb = [_|Xs],
@@ -105,15 +106,33 @@ ordering(CLP,Pb) :-
 	    add_edges([],Es,Gb)
 	),
 	combine(Ga,Gb,Gc),
+	check_acyclic(Gc,Pb),
 	class_put_prio(Class,Gc).
 ordering(_,_).
+
+% check_acyclic(Graph,Spec)
+%
+% Raises an error if Spec has made the priority graph cyclic, i.e. if the
+% orderings stated so far contradict each other.  Reporting this here
+% rather than when the answer is projected lets us name the culprit.
+
+check_acyclic(G,Spec) :-
+	(   normalize(G,Gn),
+	    top_sort(Gn,_)
+	->  true
+	;   throw(error(cyclic_ordering(Spec),_))
+	).
 
 arrangement(Class,Arr) :-
 	class_get_prio(Class,G),
 	normalize(G,Gn),
 	top_sort(Gn,Arr),
 	!.
-arrangement(_,_) :- throw(unsatisfiable_ordering).
+% The orderings of two classes can each be acyclic and still be cyclic
+% after the classes are merged, so this has to be checked here as well.
+% In that case there is no single culprit to report.
+arrangement(_,_) :-
+	throw(error(cyclic_ordering(_),_)).
 
 % intern_vars(Vars)
 %
@@ -249,6 +268,23 @@ group([L-Ll|Ls],K,Kl,Res) :-
 	    group(Ls,L,Ll,Tail)
 	).
 
+
+		 /*******************************
+		 *	       MESSAGES		*
+		 *******************************/
+
+:- multifile
+	prolog:error_message//1.
+
+prolog:error_message(cyclic_ordering(Spec)) -->
+	[ 'CLP(Q,R): the requested variable ordering is cyclic'-[] ],
+	cyclic_culprit(Spec).
+
+cyclic_culprit(Spec) -->
+	{ var(Spec) },
+	!.
+cyclic_culprit(Spec) -->
+	[ ' (on adding ~p)'-[Spec] ].
 
 		 /*******************************
 		 *	       SANDBOX		*

@@ -741,6 +741,24 @@ test(ordering_list_controls_shape_2) :-
     ordering([X,Y]),
     dump([X,Y], [x,y], C),
     assertion(C = [x = _-y]).
+test(cyclic_ordering_list, error(cyclic_ordering(_))) :-
+    {X + Y =:= 1},
+    ordering([X,Y]),
+    ordering([Y,X]).
+test(cyclic_ordering_lt, error(cyclic_ordering(_))) :-
+    {X + Y =:= 1},
+    ordering(X < Y),
+    ordering(Y < X).
+test(cyclic_ordering_after_merge, error(cyclic_ordering(_))) :-
+    % each class is acyclic on its own; unifying the variables merges the
+    % priority graphs and only then is the result cyclic, so this one is
+    % caught by arrangement/2 rather than by ordering/2
+    {X + _ =:= 1}, {Y + _ =:= 2},
+    ordering(X < Y),
+    {A + _ =:= 3}, {B + _ =:= 4},
+    ordering(B < A),
+    X = A, Y = B,
+    dump([X,Y], [x,y], _).
 test(ordering_before_constraints) :-
     ordering([Y,X]),
     {X + Y =:= 1},

@@ -853,9 +853,13 @@ reproduced as tests in `test_clpr.pl`.
 * `bb_inf/3,4,5` uses the non-backtrackable global variable `prov_opt` and is
   therefore not reentrant and not thread-safe with respect to itself.
 * Exceptions thrown by the solver mostly use ad-hoc terms
-  (`instantiation_error(Goal,Arg)`, `unsatisfiable_ordering`,
+  (`instantiation_error(Goal,Arg)`,
   `permission_error('mix CLP(Q) variables with','CLP(R) variables:',X)`)
-  rather than ISO `error/2` terms.
+  rather than ISO `error/2` terms.  A contradictory `ordering/1` used to
+  throw the bare atom `unsatisfiable_ordering`, which printed as "Unknown
+  message"; it now raises `error(cyclic_ordering(Spec), _)` with a message
+  that names the culprit, and does so when the offending ordering is stated
+  rather than when the answer is projected.
 
 
 ## 15. Testing

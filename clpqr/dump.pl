@@ -45,7 +45,7 @@
 :- use_module(library(assoc), [empty_assoc/1, put_assoc/4, assoc_to_list/2]).
 :- use_module(itf, [dump_linear/3, dump_nonzero/3]).
 :- use_module(project, [project_attributes/2]).
-:- use_module(ordering, [ordering/1]).
+:- use_module(ordering, [intern_vars/1]).
 :- use_module(library(error), [must_be/2]).
 
 %!  dump(+Target,-NewVars,-Constraints) is det.
@@ -89,7 +89,7 @@ copy_term_clpq(Term,Copy,Constraints) :-
 
 copy_term_clpq_(Term, Copy, Constraints) :-
 	term_variables(Term,Target),		 % get all variables in Term
-	ordering(Target),
+	intern_vars(Target),			 % make them reachable from the store
 	related_linear_vars(Target,All),	 % get all variables of the classes of the variables in Term
 	nonlin_crux(All,Nonlin),		 % get a list of all the nonlinear goals of these variables
 	project_attributes(Target,All),

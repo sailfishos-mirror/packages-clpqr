@@ -606,6 +606,9 @@ This is the most intricate part of the system and the part users see.
 Driven from `dump/3` (and from `copy_term/3` via `attribute_goals//1`), given
 the target variables `Tvs` and all variables of their classes `Avs`:
 
+0. `intern_vars/1` (from `ordering.pl`) puts every target the solver already
+   knows into one class, so that the rest of the projection can reach the
+   whole store from the target list.
 1. `mark_target/1` sets argument 9 of the targets.
 2. `project_nonlin/3` collects the delayed non-linear goals.  This *consumes*
    the mutexes, which is why the whole projection must run inside a failure
@@ -660,24 +663,23 @@ graph* stored in the class's `clpqr_class` attribute.  At projection time
 arrangement to `1,2,…`, renormalises every row (`renorm_all/1`) and finally
 pivots rows into the requested shape (`arrange_pivot/1`).
 
-The direction is: **a variable that comes earlier is preferred as
-independent**, so it appears on the right-hand sides, and later variables get
-isolated on the left.  `arrange_pivot/1` establishes this by pivoting any
-dependent variable whose row leads with a later-ordered variable.
+The direction, quoting TR-95-09, is: *"Suppose that instead of B, you want Mp
+to be the **defined** variable"* — so **a variable that comes earlier is the
+one the answer defines**, i.e. the one on the left-hand side, and `A<B` "means
+that A goes to the left of B".  `arrange_pivot/1` establishes this by pivoting
+any dependent variable that is defined over an earlier-ordered variable.
 
-`dump/3` applies `ordering(Target)` to its own first argument, so the order of
-the target list already controls the shape of the answer:
+`ordering/1` "acts like a constraint: you can put it anywhere in the
+computation", so it has to work on variables the solver has not seen yet.  It
+cannot tell by itself whether such a variable belongs to CLP(Q) or CLP(R), so
+`clpq:ordering/1` and `clpr:ordering/1` are thin wrappers that pass their
+solver to `clpqr_ordering:ordering/2`.
 
-```
-?- {X+Y =:= 1}, dump([X,Y],[x,y],C).
-C = [y=1-x].
-?- {X+Y =:= 1}, dump([Y,X],[y,x],C).
-C = [x=1-y].
-```
-
-One caveat remains, and it is really a defect (§14.3): `ordering/1` silently
-does nothing for variables that are not yet in the store, and a user ordering
-that disagrees with the `dump/3` target list makes the priority graph cyclic.
+`dump/3` does *not* impose an ordering of its own — it only calls
+`intern_vars/1` to make its targets reachable from the linear store, which is
+what lets `nonlin_crux/2` find their delayed goals.  The order of the `dump/3`
+target list is therefore immaterial, and an explicit `ordering/1` is never
+contradicted.
 
 ### 12.5 Rendering
 
@@ -802,30 +804,31 @@ entered: the first clause of `ineq/4` and the first clause of
   ERROR: Type error: `clpq_constraint' expected, found `minimize_lin(_123)'
   ```
 
-### 14.3 `ordering/1` is largely unusable
+### 14.3 `ordering/1`
 
-* The arrangement itself used to be discarded: `arrange_pivot/1` in
-  `clpqr/project.pl` tested `arg(6,AttY,clpqr_class(Class))` where argument 6
-  of the `clpqr_itf` attribute holds `class(C)`, so the guard could never
-  succeed and no pivot was ever made.  *Fixed*; `ordering/1` and the order of
-  the `dump/3` target list now determine the shape of the answer.
-* On variables that are not yet known to the solver, `join_class/2` fails
-  (because `clp_type/2` fails), and `ordering/1` falls through to its catch-all
-  clause `ordering(_).`  The call silently succeeds and does nothing.  Since
-  the natural use is `ordering([X,Y]), {…}`, this is the common case.
-* A single-element list generates no edges at all, so the manual's example
-  `ordering([Mp])` has no effect.
-* `dump/3` calls `ordering(Target)` internally on its first argument.  If the
-  user's ordering disagrees with the order of the `dump/3` target list, the
-  combined graph has a cycle and `arrangement/2` throws
-  `unsatisfiable_ordering`:
+`ordering/1` used to have no effect whatsoever.  Four separate defects
+conspired, all of them now fixed:
 
-  ```
-  ?- {X+Y =:= 1}, ordering([Y,X]), dump([X,Y],[x,y],C).
-  ERROR: Unknown message: unsatisfiable_ordering
-  ```
-* `unsatisfiable_ordering` is thrown as a bare term, not as an
-  `error(_,_)` term, so it prints as "Unknown message".
+* The arrangement was discarded: `arrange_pivot/1` in `clpqr/project.pl`
+  tested `arg(6,AttY,clpqr_class(Class))` where argument 6 of the `clpqr_itf`
+  attribute holds `class(C)`, so the guard could never succeed and no pivot
+  was ever made.
+* The pivot went the wrong way round: it made the *last* variable of the
+  arrangement the defined one, where TR-95-09 makes it the *first*.
+* `dump/3` called `ordering(Target)` on its own target list, which imposes a
+  total order over the targets and therefore swamps — or contradicts — any
+  ordering the user asked for.  A contradiction threw a bare
+  `unsatisfiable_ordering` term.  `dump/3` now calls `intern_vars/1`, which
+  has the side effect the call was really there for (making the targets
+  reachable from the linear store) without touching the priority graph.
+* On variables the solver had not seen yet, `join_class/2` failed and
+  `ordering/1` fell through to its catch-all clause, silently doing nothing.
+  Since the manual explicitly allows stating an ordering before the
+  constraints, `clpq:ordering/1` and `clpr:ordering/1` now pass their solver
+  down so that such variables can be interned.
+
+The four worked examples of the manual's "Variable Ordering" section are
+reproduced as tests in `test_clpr.pl`.
 
 ### 14.4 Interface and documentation mismatches
 

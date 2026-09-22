@@ -725,17 +725,27 @@ test(nonlinear_residue) :-
     {X*Y =:= 6},
     dump([X,Y], [x,y], C),
     assertion(C = [_]).
-test(target_order_controls_shape) :-
+test(target_order_does_not_control_shape) :-
     {X + Y =:= 1},
     dump([X,Y], [x,y], C1),
-    assertion(C1 = [y = _-x]),
     dump([Y,X], [y,x], C2),
-    assertion(C2 = [x = _-y]).
+    assertion(C1 == C2).
 test(ordering_list_controls_shape) :-
+    % the variable that comes first is the one the answer defines
     {X + Y =:= 1},
     ordering([Y,X]),
-    dump([Y,X], [y,x], C),
+    dump([X,Y], [x,y], C),
+    assertion(C = [y = _-x]).
+test(ordering_list_controls_shape_2) :-
+    {X + Y =:= 1},
+    ordering([X,Y]),
+    dump([X,Y], [x,y], C),
     assertion(C = [x = _-y]).
+test(ordering_before_constraints) :-
+    ordering([Y,X]),
+    {X + Y =:= 1},
+    dump([X,Y], [x,y], C),
+    assertion(C = [y = _-x]).
 test(target_must_be_free, error(uninstantiation_error(_))) :-
     {X =:= 1},
     dump([X], [x], _).
@@ -1143,6 +1153,46 @@ test(convex_combination) :-
     assertion(near(Min, 1.0)),
     assertion(near(Max, 9.0)).
 
+% The "Variable Ordering" section of OFAI TR-95-09 works these examples
+% with the 12 period mortgage.  They are reproduced here verbatim; note
+% that assertion/1 does not keep bindings, so the shape is matched with
+% plain unification and only the coefficients are asserted.
+
+test(ordering_manual_plain) :-
+    % {B=1.1268250301319698*P-12.682503013196973*Mp}
+    mg(P, 12, 0.01, B, Mp), !,
+    dump([P,B,Mp], [p,b,mp], C),
+    C = [b = Cp*p - Cm*mp],
+    assertion(near(Cp, 1.1268250301319698)),
+    assertion(near(Cm, 12.682503013196973)).
+test(ordering_manual_mp) :-
+    % "instead of B, you want Mp to be the defined variable":
+    % {Mp= -0.0788487886783417*B+0.08884878867834171*P}
+    mg(P, 12, 0.01, B, Mp), !,
+    ordering([Mp]),
+    dump([P,B,Mp], [p,b,mp], C),
+    C = [mp = Cb*b + Cp*p],
+    assertion(near(Cb, -0.0788487886783417)),
+    assertion(near(Cp, 0.08884878867834171)).
+test(ordering_manual_mp_p) :-
+    % "require P to appear before (to the left of) B in an addition":
+    % {Mp=0.08884878867834171*P-0.0788487886783417*B}
+    mg(P, 12, 0.01, B, Mp), !,
+    ordering([Mp,P]),
+    dump([P,B,Mp], [p,b,mp], C),
+    C = [mp = Cp*p - Cb*b],
+    assertion(near(Cp, 0.08884878867834171)),
+    assertion(near(Cb, 0.0788487886783417)).
+test(ordering_manual_before_constraints) :-
+    % "ordering/1 acts like a constraint: you can put it anywhere in the
+    % computation": {B= -12.682503013196973*Mp+1.1268250301319698*P}
+    ordering(B < Mp),
+    mg(P, 12, 0.01, B, Mp), !,
+    dump([P,B,Mp], [p,b,mp], C),
+    C = [b = Cm*mp + Cp*p],
+    assertion(near(Cm, -12.682503013196973)),
+    assertion(near(Cp, 1.1268250301319698)).
+
 % Newton's method for sqrt(2), from the OFAI manual's precision section.
 
 newton(X, X0, X1) :-
@@ -1165,17 +1215,6 @@ test(newton_sqrt2) :-
 :- begin_tests(clpr_known_issues).
 
 % See doc/design.md, section 14.
-
-test(ordering_before_constraints_is_a_noop) :-
-    ordering([X,Y]),
-    assertion(var(X)),
-    assertion(var(Y)),
-    \+ clp_type(X, _).
-
-test(ordering_conflicts_with_dump, throws(unsatisfiable_ordering)) :-
-    {X + Y =:= 1},
-    ordering([Y,X]),
-    dump([X,Y], [x,y], _).
 
 test(pending_optimisation_leaks_into_residual) :-
     % A minimize/1 still waiting for a linear expression puts its internal

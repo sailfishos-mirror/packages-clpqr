@@ -723,29 +723,46 @@ test(nonlinear_residue) :-
     {X*Y =:= 6},
     dump([X,Y], [x,y], C),
     assertion(C = [_]).
-test(target_order_controls_shape) :-
-    % dump/3 calls ordering/1 on its target list: variables that come first
-    % are preferred as independent, later ones get isolated.
+test(target_order_does_not_control_shape) :-
+    % dump/3 only interns its targets; it does not impose an ordering of
+    % its own, so an explicit ordering/1 is never contradicted
     {X + Y =:= 1},
     dump([X,Y], [x,y], C1),
-    assertion(C1 == [y = 1-x]),
     dump([Y,X], [y,x], C2),
-    assertion(C2 == [x = 1-y]).
+    assertion(C1 == C2).
 test(ordering_list_controls_shape) :-
+    % the variable that comes first is the one the answer defines
     {X + Y =:= 1},
     ordering([Y,X]),
-    dump([Y,X], [y,x], C),
+    dump([X,Y], [x,y], C),
+    assertion(C == [y = 1-x]).
+test(ordering_list_controls_shape_2) :-
+    {X + Y =:= 1},
+    ordering([X,Y]),
+    dump([X,Y], [x,y], C),
     assertion(C == [x = 1-y]).
 test(ordering_lt_controls_shape) :-
     {X + Y =:= 1},
     ordering(Y < X),
-    dump([Y,X], [y,x], C),
-    assertion(C == [x = 1-y]).
+    dump([X,Y], [x,y], C),
+    assertion(C == [y = 1-x]).
 test(ordering_gt_controls_shape) :-
     {X + Y =:= 1},
     ordering(X > Y),
-    dump([Y,X], [y,x], C),
-    assertion(C == [x = 1-y]).
+    dump([X,Y], [x,y], C),
+    assertion(C == [y = 1-x]).
+test(ordering_before_constraints) :-
+    % "ordering/1 acts like a constraint: you can put it anywhere in the
+    % computation" (OFAI TR-95-09)
+    ordering([Y,X]),
+    {X + Y =:= 1},
+    dump([X,Y], [x,y], C),
+    assertion(C == [y = 1-x]).
+test(ordering_of_three) :-
+    {X + Y + Z =:= 1},
+    ordering([Z,Y,X]),
+    dump([X,Y,Z], [x,y,z], C),
+    assertion(C == [z = 1-y-x]).
 test(target_must_be_free, error(uninstantiation_error(1))) :-
     {X =:= 1},
     dump([X], [x], _).
@@ -939,7 +956,7 @@ test(bound_on_dependent_variable) :-
     {Z =:= X + Y},
     {Z >= 1, Z =< 3},
     dump([X,Y,Z], [x,y,z], C),
-    assertion(C == [z >= 1, z =< 3, y = -x+z]).
+    assertion(C == [z >= 1, z =< 3, y = z-x]).
 test(strict_bound_on_dependent_variable) :-
     {Z =:= _X + _Y},
     {Z > 1, Z < 3},
@@ -1234,30 +1251,6 @@ test(root_extraction_not_implemented) :-
     % implemented in CLP(R) only.  Should bind Y == 2.
     {8 =:= Y^3},
     assertion(var(Y)).
-
-test(ordering_before_constraints_is_a_noop) :-
-    % ordering/1 fails silently on variables the solver does not know yet,
-    % because clp_type/2 fails for them.
-    ordering([X,Y]),
-    assertion(var(X)),
-    assertion(var(Y)),
-    \+ clp_type(X, _).
-
-test(ordering_single_variable_is_a_noop, [nondet]) :-
-    % A one-element list generates no edges, so ordering([MP]) from the
-    % manual has no effect.
-    {X + Y =:= 1},
-    ordering([Y]),
-    dump([X,Y], [x,y], C),
-    assertion(C == [y = 1-x]).
-
-test(ordering_conflicts_with_dump, throws(unsatisfiable_ordering)) :-
-    % dump/3 imposes ordering(Target) of its own; a user ordering that
-    % disagrees makes the priority graph cyclic.  Also note that the
-    % exception is not an error(_,_) term.
-    {X + Y =:= 1},
-    ordering([Y,X]),
-    dump([X,Y], [x,y], _).
 
 test(waking_leaves_choicepoint, [nondet]) :-
     % geler.pl's attr_unify_hook/2 has a catch-all second clause, and

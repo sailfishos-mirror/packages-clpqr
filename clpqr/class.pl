@@ -45,12 +45,10 @@
 	    class_basis_pivot/3,
 	    class_get_clp/2,
 	    class_get_prio/2,
-	    class_put_prio/2,
-	    ordering/1,
-	    arrangement/2
+	    class_put_prio/2
 	  ]).
 
-:- use_module(ordering, [combine/3, ordering/1, arrangement/2]).
+:- use_module(ordering, [combine/3]).
 :- use_module(library(lists), [append/3]).
 
 % called when two classes are unified: the allvars lists are appended to eachother, as well as the basis

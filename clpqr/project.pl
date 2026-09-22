@@ -266,8 +266,11 @@ renorm_all([X|Xs]) :-
 
 % arrange_pivot(Vars)
 %
-% If variable X of Vars has type t_none and has a higher order than the first element of
-% its linear equation, then it is pivoted with that element.
+% Realises the arrangement computed by ordering.pl: a variable that comes
+% first is the one that should be *defined*, i.e. appear on the left hand
+% side of the answer.  So whenever a dependent variable X of type t_none is
+% defined over a variable Y that comes before it, the two are pivoted, which
+% makes Y the defined one.
 
 arrange_pivot(Xs) :-
 	var(Xs),
@@ -284,7 +287,7 @@ arrange_pivot([X|Xs]) :-
 	    arg(2,AttY,type(IndAct)),
 	    arg(5,AttY,order(OrdY)),
 	    arg(6,AttY,class(Class)),
-	    compare(>,OrdY,OrdX)
+	    compare(<,OrdY,OrdX)
 	->  pivot(CLP,X,Class,OrdY,t_none,IndAct),
 	    arrange_pivot(Xs)
 	;   arrange_pivot(Xs)

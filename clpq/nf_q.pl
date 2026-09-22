@@ -501,13 +501,47 @@ nl_invertible(exp(B,C),X,A,Res) :-
 	    Kb > 0,
 	    Kb =\= 1,
 	    X = C, % note delayed unification
-	    Res is rational(log(A)) rdiv rational(log(Kb))
+	    log_q(A,Kb,Res)
 	;   nf_constant(C,Kc),
 	    A =\= 0,
 	    Kc > 0,
 	    X = B, % note delayed unification
-	    Res is rational(A**(1 rdiv Kc))
+	    % ** is exact on rationals whenever the root is
+	    Res is rationalize(A**(1 rdiv Kc))
 	).
+
+% log_q(A,Kb,Res)
+%
+% Res is log(A)/log(Kb).  This is in general irrational and thus not
+% representable in Q, so we evaluate the quotient in floating point and
+% first look for an exact rational answer with a small denominator.  Only
+% when there is none do we fall back on the simplest rational that maps
+% back to the same float.  Note that plain rational/1 on the float is not
+% good enough: log(1000)/log(10) is 2.9999999999999996, whose exact value
+% is a ratio of two 16 digit integers rather than 3.
+
+log_q(A,Kb,Res) :-
+	Float is log(A)/log(Kb),
+	(   exact_log(Float,A,Kb,Exact)
+	->  Res = Exact
+	;   Res is rationalize(Float)
+	).
+
+% exact_log(Float,A,Kb,Exact)
+%
+% Exact is a rational N/D with D =< 16 that is close to Float and satisfies
+% Kb**Exact =:= A.  The bound on N keeps the verification cheap.
+
+exact_log(Float,A,Kb,Exact) :-
+	between(1,16,D),
+	Scaled is Float*D,
+	N is round(Scaled),
+	abs(Scaled-N) < 1.0e-9,
+	abs(N) =< 1024,
+	Try is N rdiv D,
+	catch(Kb**Try =:= A, _, fail),
+	!,
+	Exact = Try.
 
 % -----------------------------------------------------------------------
 

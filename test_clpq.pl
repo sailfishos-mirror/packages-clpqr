@@ -431,9 +431,35 @@ test(invert_tan) :-
     {0 =:= tan(X)},
     assertion(X == 0).
 test(invert_exp_base) :-
-    % 2^Y = 8; see clpq_known_issues for the precision problem
     {8 =:= 2^Y},
-    assertion(number(Y)).
+    assertion(Y == 3).
+test(invert_exp_base_rounding) :-
+    % log(1000)/log(10) is 2.9999999999999996 in floating point
+    {1000 =:= 10^Y},
+    assertion(Y == 3).
+test(invert_exp_base_large) :-
+    {59049 =:= 3^Y},
+    assertion(Y == 10).
+test(invert_exp_base_negative) :-
+    {1r8 =:= 2^Y},
+    assertion(Y == -3).
+test(invert_exp_base_fractional) :-
+    {2 =:= 8^Y},
+    assertion(Y == 1r3).
+test(invert_exp_base_unity) :-
+    {1 =:= 2^Y},
+    assertion(Y == 0).
+test(invert_exp_base_irrational) :-
+    % log2(3) is irrational: the best we can do is the simplest rational
+    % that maps back to the same float
+    {3 =:= 2^Y},
+    assertion(rational(Y)),
+    assertion(abs(Y - 1.584962500721156) < 1r1000000000000000).
+test(invert_exp_exponent) :-
+    % the other branch of nl_invertible/4: X and Z ground in X = Y^Z
+    {8 =:= Y^2.5},
+    assertion(rational(Y)),
+    assertion(abs(Y - 2.2973967099940698) < 1r1000000000000000).
 test(nonlinear_becomes_linear, [nondet]) :-
     {Z =:= X*_Y + 1},
     {X =:= 0},
@@ -1191,13 +1217,6 @@ test(entailed_disequation) :-
 
 % See doc/design.md, section 14.  These tests pin down *wrong* behaviour so
 % that fixing it is noticed.  Each says what the right answer would be.
-
-test(exponent_inversion_is_inexact) :-
-    % Should be Y == 3.  nf_q.pl uses rational/1 on log/1 results instead of
-    % rationalize/1, so the answer is an enormous rational close to 3.
-    {8 =:= 2^Y},
-    assertion(Y =\= 3),
-    assertion(abs(Y - 3) < 1r1000000).
 
 test(root_extraction_not_implemented) :-
     % The documented isolation axiom "8 = Y^3 with X and Z ground" is

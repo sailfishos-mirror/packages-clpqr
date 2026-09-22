@@ -530,6 +530,14 @@ The multiplication and division cases are handled structurally by the normal
 form (a product of a scalar and a variable *is* linear), the rest by
 `nl_invertible/4` and `nl_eval/2`.
 
+Inverting `A = Kb^X` for `X` needs a logarithm, which is in general
+irrational and therefore not representable in Q at all.  `log_q/3` in
+`nf_q.pl` computes the quotient in floating point, looks for an exact
+rational answer with a denominator of at most 16 (verifying it with exact
+rational arithmetic), and only falls back on `rationalize/1` when there is
+none.  That recovers `3` from `{1000 =:= 10^Y}` — whose float quotient is
+`2.9999999999999996` — and `1r3` from `{2 =:= 8^Y}`.
+
 The `X = Y^Z` case is where Q and R differ most: CLP(R) has four extra
 `submit_eq_c1/3` clauses (added later than the port) that solve `I + K*X^P = 0`
 for a variable `X` and a numeric exponent `P`, including the two-solution case
@@ -780,11 +788,6 @@ entered: the first clause of `ineq/4` and the first clause of
 
 ### 14.2 Wrong results
 
-* **Exponent inversion in CLP(Q) is inexact.**  `clpq/nf_q.pl:504` computes
-  `rational(log(A)) rdiv rational(log(Kb))`, i.e. it takes the *exact*
-  rational value of two floats.  `{X =:= 8}, {X =:= 2^Y}` yields
-  `Y = 18729944304496076r6243314768165359` instead of `3`.  Using
-  `rationalize/1` instead of `rational/1` would give `3`.
 * **Residual goals are duplicated for purely non-linear stores.**
   `clpqr/dump.pl:200-214`: `attribute_goals//1` deletes the `clpqr_itf`
   attribute of the variables it has reported, but not the `clpqr_geler`

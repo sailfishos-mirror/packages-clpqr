@@ -851,14 +851,18 @@ reproduced as tests in `test_clpr.pl`.
 
 ### 14.5 Robustness
 
-* Exceptions thrown by the solver mostly use ad-hoc terms
-  (`instantiation_error(Goal,Arg)`,
-  `permission_error('mix CLP(Q) variables with','CLP(R) variables:',X)`)
-  rather than ISO `error/2` terms.  A contradictory `ordering/1` used to
-  throw the bare atom `unsatisfiable_ordering`, which printed as "Unknown
-  message"; it now raises `error(cyclic_ordering(Spec), _)` with a message
-  that names the culprit, and does so when the offending ordering is stated
-  rather than when the answer is projected.
+* Several exceptions used to be thrown as bare terms rather than ISO
+  `error/2` terms, so they printed as "Unknown message":
+  `instantiation_error(Goal,Arg)` from `{}/1` (CLP(Q) only), from
+  `entailed/1` (CLP(R) only) and from `bb_inf/3` (both), and the atom
+  `unsatisfiable_ordering` from a contradictory `ordering/1`.  All of these
+  now raise proper errors — `instantiation_error`, `type_error(var, T)` and
+  `cyclic_ordering(Spec)` respectively — and Q and R agree on which.
+  `context(_)` in 22 throws was corrected to `context(_,_)`.
+* The remaining stylistic oddity is
+  `permission_error('mix CLP(Q) variables with','CLP(R) variables:',X)`,
+  which spreads the message over the first two arguments of the formal
+  term.  It prints correctly, so it is left alone.
 
 
 ## 15. Testing

@@ -182,10 +182,13 @@ test(sqrt_rejected, error(type_error(clpr_expression, sqrt(4)))) :-
     {_ =:= sqrt(4)}.
 test(unknown_constant_rejected, error(type_error(clpr_expression, #(foo)))) :-
     {_ =:= #(foo)}.
-test(entailed_var, throws(instantiation_error(entailed(_),1))) :-
+test(entailed_var, error(instantiation_error)) :-
     entailed(_).
 test(entailed_bad, error(type_error(clpr_constraint, foo))) :-
     entailed(foo).
+test(bb_inf_bad_int, error(type_error(var, _))) :-
+    {X >= 0},
+    bb_inf([_+_], X, _).
 
 :- end_tests(clpr_syntax).
 

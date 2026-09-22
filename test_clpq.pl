@@ -137,7 +137,7 @@ test(zero_power) :-
 
 % Errors
 
-test(var_constraint, throws(instantiation_error({_},1))) :-
+test(var_constraint, error(instantiation_error)) :-
     {_}.
 test(bad_constraint, error(type_error(clpq_constraint, foo))) :-
     {foo}.
@@ -154,6 +154,9 @@ test(entailed_var, error(instantiation_error)) :-
     entailed(_).
 test(entailed_bad, error(type_error(clpq_constraint, foo))) :-
     entailed(foo).
+test(bb_inf_bad_int, error(type_error(var, _))) :-
+    {X >= 0},
+    bb_inf([_+_], X, _).
 
 :- end_tests(clpq_syntax).
 

@@ -195,7 +195,7 @@ deref_var(X,Lin) :-
 	(   get_attr(X,clpqr_itf,Att)
 	->  (   \+ arg(1,Att,clpq)
 	    ->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	    ;   arg(4,Att,lin(Lin))
 	    ->  true
 	    ;   setarg(2,Att,type(t_none)),

@@ -90,7 +90,7 @@
 {Rel} :-
 	var(Rel),
 	!,
-	throw(instantiation_error({Rel},1)).
+	instantiation_error(Rel).
 {R,Rs} :-
 	!,
 	{R},{Rs}.

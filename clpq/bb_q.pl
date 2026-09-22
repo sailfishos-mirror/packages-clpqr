@@ -43,6 +43,7 @@
 	    bb_inf/4,
 	    vertex_value/2
 	]).
+:- use_module(library(error), [type_error/2]).
 :- use_module(bv_q,
 	[
 	    deref/2,
@@ -215,7 +216,7 @@ bb_intern([v(1,[V^1])],X,_) :-
 	bb_narrow_lower(X),
 	bb_narrow_upper(X).
 bb_intern(_,_,Term) :-
-	throw(instantiation_error(bb_inf(Term,_),1)).
+	type_error(var, Term).
 
 % bb_narrow_lower(X)
 %

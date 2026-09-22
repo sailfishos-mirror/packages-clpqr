@@ -78,7 +78,7 @@ attr_unify_hook(g(CLP,goals(Gx),_),Y) :-
 	    (   get_attr(Y,clpqr_geler,g(A,B,C))
 	    ->  ignore((CLP \== A,throw(error(permission_error(
 		    'apply CLP(Q) constraints on','CLP(R) variable',Y),
-		    context(_))))),
+		    context(_,_))))),
 		(   % possibly mutual goals. these need to be run.
 		    % other goals are run as well to remove redundant goals.
 		    B = goals(Gy)
@@ -182,7 +182,7 @@ attach([V|Vs],CLP,Goal) :-
 	(   get_attr(V,clpqr_geler,g(A,B,C))
 	->  (   CLP \== A
 	    ->  throw(error(permission_error('apply CLP(Q) constraints on',
-		    'CLP(R) variable',V),context(_)))
+		    'CLP(R) variable',V),context(_,_)))
 	    ;   (   B = goals(Goals)
 	        ->  put_attr(V,clpqr_geler,g(A,goals((Goal,Goals)),C))
 	        ;   put_attr(V,clpqr_geler,g(A,goals(Goal),C))

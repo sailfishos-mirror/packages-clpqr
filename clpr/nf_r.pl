@@ -157,7 +157,7 @@ entailed(C) :-
 negate(Rel,_) :-
 	var(Rel),
 	!,
-	throw(instantiation_error(entailed(Rel),1)).
+	instantiation_error(Rel).
 negate((A,B),(Na;Nb)) :-
 	!,
 	negate(A,Na),

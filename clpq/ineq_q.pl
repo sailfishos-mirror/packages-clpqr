@@ -143,7 +143,7 @@ ineq_one_s_p_0(X) :-
 	!,	% old variable, this is deref
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_s_p_0(OrdX,X,Ix)
 	).
 ineq_one_s_p_0(X) :-	% new variable, nothing depends on it
@@ -159,7 +159,7 @@ ineq_one_s_n_0(X) :-
 	!,
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_s_n_0(OrdX,X,Ix)
 	).
 ineq_one_s_n_0(X) :-
@@ -175,7 +175,7 @@ ineq_one_s_p_i(X,I) :-
 	!,
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_s_p_i(OrdX,I,X,Ix)
 	).
 ineq_one_s_p_i(X,I) :-
@@ -192,7 +192,7 @@ ineq_one_s_n_i(X,I) :-
 	!,
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_s_n_i(OrdX,I,X,Ix)
 	).
 ineq_one_s_n_i(X,I) :- var_intern(t_l(I),X,2). % puts a strict inactive lowerbound on the variable
@@ -280,7 +280,7 @@ ineq_one_n_p_0(X) :-
 	!, % old variable, this is deref
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_n_p_0(OrdX,X,Ix)
 	).
 ineq_one_n_p_0(X) :-	% new variable, nothing depends on it
@@ -296,7 +296,7 @@ ineq_one_n_n_0(X) :-
 	!,
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_n_n_0(OrdX,X,Ix)
 	).
 ineq_one_n_n_0(X) :-
@@ -312,7 +312,7 @@ ineq_one_n_p_i(X,I) :-
 	!,
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_n_p_i(OrdX,I,X,Ix)
 	).
 ineq_one_n_p_i(X,I) :-
@@ -329,7 +329,7 @@ ineq_one_n_n_i(X,I) :-
 	!,
 	(   \+ arg(1,Att,clpq)
 	->  throw(error(permission_error('mix CLP(Q) variables with',
-		'CLP(R) variables:',X),context(_)))
+		'CLP(R) variables:',X),context(_,_)))
 	;   ineq_one_old_n_n_i(OrdX,I,X,Ix)
 	).
 ineq_one_n_n_i(X,I) :-

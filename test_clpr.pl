@@ -725,6 +725,17 @@ test(nonlinear_residue) :-
     {X*Y =:= 6},
     dump([X,Y], [x,y], C),
     assertion(C = [_]).
+test(target_order_controls_shape) :-
+    {X + Y =:= 1},
+    dump([X,Y], [x,y], C1),
+    assertion(C1 = [y = _-x]),
+    dump([Y,X], [y,x], C2),
+    assertion(C2 = [x = _-y]).
+test(ordering_list_controls_shape) :-
+    {X + Y =:= 1},
+    ordering([Y,X]),
+    dump([Y,X], [y,x], C),
+    assertion(C = [x = _-y]).
 test(target_must_be_free, error(uninstantiation_error(_))) :-
     {X =:= 1},
     dump([X], [x], _).

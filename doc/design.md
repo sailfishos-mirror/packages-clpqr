@@ -652,9 +652,24 @@ graph* stored in the class's `clpqr_class` attribute.  At projection time
 arrangement to `1,2,…`, renormalises every row (`renorm_all/1`) and finally
 pivots rows into the requested shape (`arrange_pivot/1`).
 
-Two caveats, both of which are really defects (§14): `ordering/1` silently
-does nothing for variables that are not yet in the store, and `dump/3` imposes
-an ordering of its own on the target list, which can conflict with the user's.
+The direction is: **a variable that comes earlier is preferred as
+independent**, so it appears on the right-hand sides, and later variables get
+isolated on the left.  `arrange_pivot/1` establishes this by pivoting any
+dependent variable whose row leads with a later-ordered variable.
+
+`dump/3` applies `ordering(Target)` to its own first argument, so the order of
+the target list already controls the shape of the answer:
+
+```
+?- {X+Y =:= 1}, dump([X,Y],[x,y],C).
+C = [y=1-x].
+?- {X+Y =:= 1}, dump([Y,X],[y,x],C).
+C = [x=1-y].
+```
+
+One caveat remains, and it is really a defect (§14.3): `ordering/1` silently
+does nothing for variables that are not yet in the store, and a user ordering
+that disagrees with the `dump/3` target list makes the priority graph cyclic.
 
 ### 12.5 Rendering
 
@@ -731,12 +746,6 @@ behaviour first.  Tests that encode a *wrong* answer are marked in the suite.
 
 ### 14.1 Dead code that changes behaviour
 
-* `clpqr/project.pl:286` — `arrange_pivot/1` reads
-  `arg(6,AttY,clpqr_class(Class))`, but argument 6 of the `clpqr_itf`
-  attribute is `class(C)`.  The guard can never succeed, so the final pivot
-  that realises a user `ordering/1` is never performed.  Changing it to
-  `arg(6,AttY,class(Class))` makes `{X+Y=:=1}, ordering([Y,X])` project to
-  `x = 1-y` instead of `y = 1-x`, i.e. it makes `ordering/1` work.
 * `clpq/bv_q.pl:1271`, `clpr/bv_r.pl:1296` — `pivot/2` reads
   `arg(5,AttI,class(Class))` where argument 5 is `order(Ord)`.  `pivot/2` is
   currently unreachable (only `pivot/5` is called), so this is latent.
@@ -804,6 +813,11 @@ entered: the first clause of `ineq/4` and the first clause of
 
 ### 14.3 `ordering/1` is largely unusable
 
+* The arrangement itself used to be discarded: `arrange_pivot/1` in
+  `clpqr/project.pl` tested `arg(6,AttY,clpqr_class(Class))` where argument 6
+  of the `clpqr_itf` attribute holds `class(C)`, so the guard could never
+  succeed and no pivot was ever made.  *Fixed*; `ordering/1` and the order of
+  the `dump/3` target list now determine the shape of the answer.
 * On variables that are not yet known to the solver, `join_class/2` fails
   (because `clp_type/2` fails), and `ordering/1` falls through to its catch-all
   clause `ordering(_).`  The call silently succeeds and does nothing.  Since

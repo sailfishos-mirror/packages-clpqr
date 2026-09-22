@@ -697,6 +697,29 @@ test(nonlinear_residue) :-
     {X*Y =:= 6},
     dump([X,Y], [x,y], C),
     assertion(C = [_]).
+test(target_order_controls_shape) :-
+    % dump/3 calls ordering/1 on its target list: variables that come first
+    % are preferred as independent, later ones get isolated.
+    {X + Y =:= 1},
+    dump([X,Y], [x,y], C1),
+    assertion(C1 == [y = 1-x]),
+    dump([Y,X], [y,x], C2),
+    assertion(C2 == [x = 1-y]).
+test(ordering_list_controls_shape) :-
+    {X + Y =:= 1},
+    ordering([Y,X]),
+    dump([Y,X], [y,x], C),
+    assertion(C == [x = 1-y]).
+test(ordering_lt_controls_shape) :-
+    {X + Y =:= 1},
+    ordering(Y < X),
+    dump([Y,X], [y,x], C),
+    assertion(C == [x = 1-y]).
+test(ordering_gt_controls_shape) :-
+    {X + Y =:= 1},
+    ordering(X > Y),
+    dump([Y,X], [y,x], C),
+    assertion(C == [x = 1-y]).
 test(target_must_be_free, error(uninstantiation_error(1))) :-
     {X =:= 1},
     dump([X], [x], _).
@@ -1196,14 +1219,6 @@ test(ordering_single_variable_is_a_noop, [nondet]) :-
     {X + Y =:= 1},
     ordering([Y]),
     dump([X,Y], [x,y], C),
-    assertion(C == [y = 1-x]).
-
-test(ordering_is_not_applied) :-
-    % With clpqr/project.pl:286 fixed (class/1 instead of clpqr_class/1)
-    % this should project to [x = 1-y].
-    {X + Y =:= 1},
-    ordering([Y,X]),
-    dump([Y,X], [y,x], C),
     assertion(C == [y = 1-x]).
 
 test(ordering_conflicts_with_dump, throws(unsatisfiable_ordering)) :-

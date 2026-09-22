@@ -283,7 +283,7 @@ arrange_pivot([X|Xs]) :-
 	    get_attr(Y,clpqr_itf,AttY),
 	    arg(2,AttY,type(IndAct)),
 	    arg(5,AttY,order(OrdY)),
-	    arg(6,AttY,clpqr_class(Class)),
+	    arg(6,AttY,class(Class)),
 	    compare(>,OrdY,OrdX)
 	->  pivot(CLP,X,Class,OrdY,t_none,IndAct),
 	    arrange_pivot(Xs)

@@ -400,14 +400,39 @@ test(delayed_product_other_way, [nondet]) :-
     {X*Y =:= 6},
     {Y =:= 3},
     assertion(X == 2).
-test(square_root_is_delayed) :-
-    % CLP(Q) cannot invert X^2 = 4, so the constraint just residuates
-    {X*X =:= 4},
-    assertion(var(X)).
+test(square_root, all(X == [2,-2])) :-
+    % the isolating axiom for X = Y^Z: an even power has two roots
+    {X*X =:= 4}.
+test(square_root_irrational, fail) :-
+    % sqrt(2) is not rational, so over Q this has no solution at all
+    {_X*_X =:= 2}.
 test(square_checked_on_binding) :-
     {X*X =:= 4}, {X =:= 2}.
 test(square_violation_detected, fail) :-
     {X*X =:= 4}, {X =:= 3}.
+test(cube_root) :-
+    {8 =:= X^3},
+    assertion(X == 2).
+test(cube_root_negative) :-
+    {-8 =:= X^3},
+    assertion(X == -2).
+test(rational_root) :-
+    {1r8 =:= X^3},
+    assertion(X == 1r2).
+test(negative_exponent_root, all(X == [1r2,-1r2])) :-
+    {4 =:= X^(-2)}.
+test(tenth_root, all(X == [2,-2])) :-
+    {1024 =:= X^10}.
+test(even_root_of_negative, fail) :-
+    {-4 =:= _X^2}.
+test(zero_root) :-
+    {0 =:= X^2},
+    assertion(X == 0).
+test(reciprocal_is_never_zero, fail) :-
+    {0 =:= 1/_X}.
+test(root_after_waking, all(X == [2,-2])) :-
+    % the power is resolved when the right hand side becomes known
+    {X^2 =:= Y}, {Y =:= 4}.
 test(division_delayed, [nondet]) :-
     {X/Y =:= 2},
     {Y =:= 3},
@@ -1154,10 +1179,13 @@ test(unrelated_stores_are_reported_separately) :-
     {A + B =:= 1},
     copy_term(f(X,Y,A,B), _, Gs),
     assertion(Gs = [{_},{_}]).
-test(alias_delayed_variables, [nondet]) :-
+test(alias_delayed_variables, all(X == [2,-2])) :-
+    % aliasing turns X*Y =:= 4 into X^2 =:= 4, which is now solved
+    {X*Y =:= 4},
+    X = Y.
+test(alias_delayed_variables_irrational, fail) :-
     {X*Y =:= 6},
-    X = Y,
-    assertion(var(X)).
+    X = Y.
 test(alias_across_delayed_goals, [nondet]) :-
     {X*Y =:= 6},
     {Z*W =:= 12},
@@ -1248,9 +1276,9 @@ test(residual_negative_exponent) :-
     dump([X,Y], [x,y], C),
     assertion(C == [x - 1/y = 0]).
 test(residual_square) :-
-    {X*X =:= 2},
+    {X*X + X =:= 2},
     dump([X], [x], C),
-    assertion(C == [-2 + x^2 = 0]).
+    assertion(C == [-2 + x + x^2 = 0]).
 test(residual_nested_function) :-
     {X =:= sin(Y+1)},
     dump([X,Y], [x,y], C),
@@ -1304,12 +1332,6 @@ test(entailed_disequation) :-
 
 % See doc/design.md, section 14.  These tests pin down *wrong* behaviour so
 % that fixing it is noticed.  Each says what the right answer would be.
-
-test(root_extraction_not_implemented) :-
-    % The documented isolation axiom "8 = Y^3 with X and Z ground" is
-    % implemented in CLP(R) only.  Should bind Y == 2.
-    {8 =:= Y^3},
-    assertion(var(Y)).
 
 test(waking_leaves_choicepoint, [nondet]) :-
     % geler.pl's attr_unify_hook/2 has a catch-all second clause, and

@@ -209,6 +209,13 @@ submit_eq_b(v(_,[X^P])) :-
 	P > 0,
 	!,
 	X = 0.
+% case b3b: n*X^P = 0 with P < 0 has no solution
+submit_eq_b(v(_,[X^P])) :-
+	var(X),
+	integer(P),
+	P < 0,
+	!,
+	fail.
 % case b2: non-linear is invertible: NL(X) = 0 => X - inv(NL)(0) = 0
 submit_eq_b(v(_,[NL^1])) :-
 	nonvar(NL),
@@ -263,6 +270,17 @@ submit_eq_c1([],v(K,[X^P]),I) :-
 	    !,
 	    X is -K rdiv I
 	).
+% case c11b: i+k*X^p=0 for an integer p other than 1 and -1.  This is the
+% isolating axiom for X = Y^Z with X and Z known.  X is a p-th root of
+% -i/k, of which there are two when p is even.  Unlike CLP(R) we must not
+% approximate: a root that is not rational does not exist in Q at all, so
+% {X^2 =:= 2} has no solution and fails.
+submit_eq_c1([],v(K,[X^P]),I) :-
+	var(X),
+	integer(P),
+	!,
+	V is -I rdiv K,
+	nth_root(P,V,X).
 % case c12: non-linear, invertible: cNL(X)^1+k=0 => inv(NL)(-k/c) = 0 ;
 %				    cNL(X)^-1+k=0 => inv(NL)(-c/k) = 0
 submit_eq_c1([],v(K,[NL^P]),I) :-
@@ -485,6 +503,35 @@ wait_linear_retry(Nf0,Var,Goal) :-
 	;   term_variables(Nf,Vars),
 	    geler(clpq,Vars,wait_linear_retry(Nf,Var,Goal))
 	).
+% nth_root(P,V,X)
+%
+% X is a rational P-th root of V, so that X**P =:= V.  Fails if there is
+% none.  An even P has two roots, which are returned on backtracking.
+
+nth_root(P,V,X) :-
+	(   V =:= 0
+	->  P > 0,
+	    X = 0
+	;   P mod 2 =:= 0
+	->  V > 0,
+	    exact_root(P,V,R),
+	    (   X = R
+	    ;   X is -R
+	    )
+	;   exact_root(P,V,X)
+	).
+
+% exact_root(P,V,R)
+%
+% R is the principal P-th root of V, provided that root is rational.
+% (**)/2 is exact on rationals whenever the root is and returns a float
+% otherwise, so rational/1 is what decides this.
+
+exact_root(P,V,R) :-
+	catch(R is V**(1 rdiv P), _, fail),
+	rational(R),
+	R**P =:= V.
+
 % -----------------------------------------------------------------------
 
 % nl_invertible(F,X,Y,Res)

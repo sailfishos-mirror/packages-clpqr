@@ -548,11 +548,22 @@ rational arithmetic), and only falls back on `rationalize/1` when there is
 none.  That recovers `3` from `{1000 =:= 10^Y}` — whose float quotient is
 `2.9999999999999996` — and `1r3` from `{2 =:= 8^Y}`.
 
-The `X = Y^Z` case is where Q and R differ most: CLP(R) has four extra
-`submit_eq_c1/3` clauses (added later than the port) that solve `I + K*X^P = 0`
-for a variable `X` and a numeric exponent `P`, including the two-solution case
-for even integer `P`.  CLP(Q) has no such clauses, so `{8 =:= Y^3}` *succeeds
-with `Y` unbound* in CLP(Q) while CLP(R) binds `Y = 2.0`.
+Both solvers solve `I + K*X^P = 0` for a variable `X` and a numeric exponent
+`P`, and both enumerate the two solutions of an even `P` on backtracking.
+They differ in what counts as a solution, which is exactly the difference
+between the two number fields:
+
+```
+?- clpq:{4 =:= X^2}.        X = 2 ;  X = -2.
+?- clpr:{4 =:= X^2}.        X = 2.0 ;  X = -2.0.
+?- clpq:{2 =:= X^2}.        false.
+?- clpr:{2 =:= X^2}.        X = 1.4142135623730951 ;  X = -1.4142135623730951.
+```
+
+CLP(R) approximates; CLP(Q) must not, and an irrational root simply does not
+exist over the rationals, so the constraint fails.  `exact_root/3` decides
+this by asking `(**)/2` for the root and checking whether the answer came
+back rational.
 
 
 ## 10. Optimisation
@@ -735,7 +746,8 @@ Other systematic differences:
   CLP(R) ("provided for compatibility only", per the manual).
 * **Integer exponents.** CLP(R) accepts a float exponent that happens to be
   integral (`integerp/2`); CLP(Q) requires `integer/1`.
-* **Root extraction.** Only CLP(R) solves `I + K*X^P = 0` for `X` (§9.3).
+* **Root extraction.** Both solve `I + K*X^P = 0` for `X`, but CLP(Q) only
+  accepts a rational root and fails otherwise (§9.3).
 * **`bb_inf`.** `bb_inf/4` in Q, `bb_inf/5` with an epsilon in R; R rounds the
   returned vertex with `round/1`.
 * **Global variables.** `bb_*.pl` in Q uses `nb_current/2`, in R
@@ -833,9 +845,6 @@ reproduced as tests in `test_clpr.pl`.
 
 ### 14.4 Interface and documentation mismatches
 
-* The documented isolation axiom "`X = exp(Y,Z)`, `X` and `Z` ground, e.g.
-  `8 = Y^3`" is implemented in CLP(R) only.  In CLP(Q), `{8 =:= Y^3}`
-  succeeds with `Y` unbound and a residual goal.
 * `dump/3` requires its first argument to be a list of *unbound* variables;
   `{X = 1}, dump([X],[y],L)` raises `uninstantiation_error(1)`.  This is
   documented as a known problem but is still surprising, since `X` is exactly

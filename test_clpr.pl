@@ -792,6 +792,20 @@ test(copy_term_is_independent) :-
 test(copy_term_unconstrained) :-
     copy_term(_, _, Gs),
     assertion(Gs == []).
+test(pending_optimisation_is_reusable) :-
+    {Y >= 1, Y =< 5},
+    minimize(X*Y),
+    copy_term(f(X,Y), f(X2,Y2), Gs),
+    assertion(Gs = [{_}, clpr:minimize(_)]),
+    maplist(call, Gs),
+    {X2 =:= 1},
+    assertion(near(X2, 1.0)),
+    assertion(near(Y2, 1.0)).
+test(dump_omits_pending_goals) :-
+    {Y >= 1, Y =< 5},
+    minimize(_X*Y),
+    dump([Y], [y], C),
+    assertion(C = [y >= _, y =< _]).
 test(residual_is_reusable) :-
     {X >= 1, X =< 3},
     copy_term(X, Y, Gs),
@@ -1233,16 +1247,6 @@ test(newton_sqrt2) :-
 :- begin_tests(clpr_known_issues).
 
 % See doc/design.md, section 14.
-
-test(pending_optimisation_leaks_into_residual) :-
-    % A minimize/1 still waiting for a linear expression puts its internal
-    % continuation into the residual goals of copy_term/3.
-    {Y >= 1, Y =< 5},
-    minimize(_X*Y),
-    copy_term(Y, _, Gs),
-    catch(maplist(call, Gs), E, true),
-    assertion(nonvar(E)),
-    assertion(E = error(type_error(clpr_constraint, minimize_lin(_)), _)).
 
 test(division_by_zero_does_not_raise, fail) :-
     {_ =:= 1/0}.

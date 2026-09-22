@@ -1178,11 +1178,30 @@ transg(resubmit_ne(Nf)) -->
 	    nf2term(Nf,Term)
 	},
 	[clpr:{Term=\=Z}].
-transg(wait_linear_retry(Nf,Res,Goal)) -->
+transg(wait_linear_retry(Nf,_Res,Goal)) -->
 	{
 	    nf2term(Nf,Term)
 	},
-	[clpr:{Term=Res},Goal].
+	pending_goal(Goal,Term).
+
+% pending_goal(Continuation,Term)
+%
+% Expresses the continuation of a delayed optimisation as the user level
+% goal that created it.  We cannot emit the continuation itself: it expects
+% its argument to be the *normal form* of Term, which wait_linear/3 unifies
+% it with, and a unification with a normal form is not something {}/1 can
+% express.  An unknown continuation is dropped rather than reported wrongly.
+
+pending_goal(bv_r:minimize_lin(_),Term) -->
+	!,
+	[clpr:minimize(Term)].
+pending_goal(bv_r:inf_lin(_,Inf,Vector,Vertex),Term) -->
+	!,
+	[clpr:inf(Term,Inf,Vector,Vertex)].
+pending_goal(bb_r:bb_inf_internal(Is,_,Eps,Inf,Vertex),Term) -->
+	!,
+	[clpr:bb_inf(Is,Term,Inf,Vertex,Eps)].
+pending_goal(_,_) --> [].
 
 integerp(X) :-
 	floor(X)=:=X.

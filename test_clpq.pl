@@ -813,6 +813,28 @@ test(copy_term_equation) :-
     {X + Y =:= 1},
     copy_term(X-Y, _, Gs),
     assertion(Gs = [{_}]).
+test(pending_optimisation_is_reusable) :-
+    % a minimize/1 that is still waiting for its expression to become
+    % linear is reported as the user level goal that created it, so the
+    % answer of copy_term/3 can be executed again
+    {Y >= 1, Y =< 5},
+    minimize(X*Y),
+    copy_term(f(X,Y), f(X2,Y2), Gs),
+    assertion(Gs = [{_}, clpq:minimize(_)]),
+    maplist(call, Gs),
+    {X2 =:= 1},
+    assertion(X2-Y2 == 1-1).
+test(pending_inf_is_reported) :-
+    {Y >= 1, Y =< 5},
+    inf(X*Y, I),
+    copy_term(f(X,Y,I), _, Gs),
+    assertion(Gs = [{_}, clpq:inf(_,_,_,_)]).
+test(dump_omits_pending_goals) :-
+    % dump/3 returns constraints; a pending optimisation is not one
+    {Y >= 1, Y =< 5},
+    minimize(_X*Y),
+    dump([Y], [y], C),
+    assertion(C == [y >= 1, y =< 5]).
 test(residual_is_reusable) :-
     {X >= 1, X =< 3},
     copy_term(X, Y, Gs),
@@ -1277,17 +1299,6 @@ test(waking_leaves_choicepoint, [nondet]) :-
     {X*Y =:= 6},
     {X =:= 2},
     assertion(Y == 3).
-
-test(pending_optimisation_leaks_into_residual) :-
-    % A minimize/1 that is still waiting for its expression to become
-    % linear puts its *internal* continuation into the residual goals, so
-    % the answer of copy_term/3 cannot be executed again.
-    {Y >= 1, Y =< 5},
-    minimize(_X*Y),
-    copy_term(Y, _, Gs),
-    catch(maplist(call, Gs), E, true),
-    assertion(nonvar(E)),
-    assertion(E = error(type_error(clpq_constraint, minimize_lin(_)), _)).
 
 test(division_by_zero_does_not_raise, fail) :-
     % zero_division/0 is `fail' with the comment `% raise_exception(_) ?'.

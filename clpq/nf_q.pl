@@ -1150,11 +1150,30 @@ transg(resubmit_ne(Nf)) -->
 	    nf2term(Nf,Term)
 	},
 	[clpq:{Term=\=Z}].
-transg(wait_linear_retry(Nf,Res,Goal)) -->
+transg(wait_linear_retry(Nf,_Res,Goal)) -->
 	{
 	    nf2term(Nf,Term)
 	},
-	[clpq:{Term=Res},Goal].
+	pending_goal(Goal,Term).
+
+% pending_goal(Continuation,Term)
+%
+% Expresses the continuation of a delayed optimisation as the user level
+% goal that created it.  We cannot emit the continuation itself: it expects
+% its argument to be the *normal form* of Term, which wait_linear/3 unifies
+% it with, and a unification with a normal form is not something {}/1 can
+% express.  An unknown continuation is dropped rather than reported wrongly.
+
+pending_goal(bv_q:minimize_lin(_),Term) -->
+	!,
+	[clpq:minimize(Term)].
+pending_goal(bv_q:inf_lin(_,Inf,Vector,Vertex),Term) -->
+	!,
+	[clpq:inf(Term,Inf,Vector,Vertex)].
+pending_goal(bb_q:bb_inf_internal(Is,_,Inf,Vertex),Term) -->
+	!,
+	[clpq:bb_inf(Is,Term,Inf,Vertex)].
+pending_goal(_,_) --> [].
 
 		 /*******************************
 		 *	       SANDBOX		*

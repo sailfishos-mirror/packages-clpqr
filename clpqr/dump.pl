@@ -80,22 +80,33 @@ projecting_assert(Clause) :-	% not our business
 	assert(Clause).
 
 copy_term_clpq(Term,Copy,Constraints) :-
+	copy_term_clpq(Term,Copy,Constraints,_Pending).
+
+% copy_term_clpq(Term,Copy,Constraints,Pending)
+%
+% Pending are the goals of delayed optimisations (see wait_linear/3) that
+% are waiting for their expression to become linear.  They are *not*
+% constraints -- calling them inside {}/1 raises a type error -- so they
+% are kept apart from Constraints.  attribute_goals//1 emits them as
+% ordinary goals; dump/3 ignores them.
+
+copy_term_clpq(Term,Copy,Constraints,Pending) :-
 	State = state(-),
-	(   copy_term_clpq_(Term, NV, Cs),
-	    nb_setarg(1, State, NV/Cs),
+	(   copy_term_clpq_(Term, NV, Cs, Ps),
+	    nb_setarg(1, State, NV/Cs/Ps),
 	    fail
-	;   arg(1, State, Copy/Constraints)
+	;   arg(1, State, Copy/Constraints/Pending)
 	).
 
-copy_term_clpq_(Term, Copy, Constraints) :-
+copy_term_clpq_(Term, Copy, Constraints, Pending) :-
 	term_variables(Term,Target),		 % get all variables in Term
 	intern_vars(Target),			 % make them reachable from the store
 	related_linear_vars(Target,All),	 % get all variables of the classes of the variables in Term
-	nonlin_crux(All,Nonlin),		 % get a list of all the nonlinear goals of these variables
+	nonlin_crux(All,Nonlin,Goals),		 % get a list of all the nonlinear goals of these variables
 	project_attributes(Target,All),
 	related_linear_vars(Target,Again),	 % project drops/adds vars
 	all_attribute_goals(Again,Gs,Nonlin),
-	copy_term_nat(Term/Gs,Copy/Constraints). % strip constraints
+	copy_term_nat(Term/Gs/Goals,Copy/Constraints/Pending). % strip constraints
 
 % l2c(Lst,Conj)
 %
@@ -162,28 +173,33 @@ cpvars([X|Xs]) -->
 	),
 	cpvars(Xs).
 
-% nonlin_crux(All,Gss)
+% nonlin_crux(All,Constraints,Goals)
 %
 % Collects all pending non-linear constraints of variables in All.
 % This marks all nonlinear goals of the variables as run and cannot
 % be reversed manually.
 
-nonlin_crux(All,Gss) :-
+nonlin_crux(All,Constraints,Goals) :-
 	collect_nonlin(All,Gs,[]),	% collect the nonlinear goals of variables All
 					% this marks the goals as run and cannot be reversed manually
-	nonlin_strip(Gs,Gss).
+	nonlin_strip(Gs,Constraints,Goals).
 
-% nonlin_strip(Gs,Solver,Res)
+% nonlin_strip(Gs,Constraints,Goals)
 %
-% Removes the goals from Gs that are not from solver Solver.
+% Splits the module qualified goals Gs into the constraints, with the {}/1
+% and the module qualification removed, and the remaining goals.  The
+% latter are the continuations of delayed optimisations; they keep their
+% qualification so that they remain callable.
 
-nonlin_strip([],[]).
-nonlin_strip([_:What|Gs],Res) :-
+nonlin_strip([],[],[]).
+nonlin_strip([M:What|Gs],Cs,Goals) :-
 	(   What = {G}
-	->  Res = [G|Gss]
-	;   Res = [What|Gss]
+	->  Cs = [G|Cst],
+	    Goals = Goalst
+	;   Cs = Cst,
+	    Goals = [M:What|Goalst]
 	),
-	nonlin_strip(Gs,Gss).
+	nonlin_strip(Gs,Cst,Goalst).
 
 all_attribute_goals([]) --> [].
 all_attribute_goals([V|Vs]) -->
@@ -199,15 +215,21 @@ all_attribute_goals([V|Vs]) -->
 
 clpqr_itf:attribute_goals(V) -->
 	(   { term_attvars(V, Vs),
-	      dump(Vs, NVs, List),
-	      List \== [],
+	      Vs \== [],
+	      copy_term_clpq(Vs, NVs, List, Pending),
+	      ( List \== [] ; Pending \== [] ),
 	      NVs = Vs,
-	      del_solver_atts(Vs),
-	      list_to_conj(List, Conj)
+	      del_solver_atts(Vs)
 	    }
-	->  [ {}(Conj) ]
+	->  constraint_goal(List),
+	      Pending			% delayed optimisations, see above
 	;   []
 	).
+
+constraint_goal([]) --> !.
+constraint_goal(List) -->
+	{ list_to_conj(List, Conj) },
+	[ {}(Conj) ].
 
 clpqr_class:attribute_goals(_) --> [].
 

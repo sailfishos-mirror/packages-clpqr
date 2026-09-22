@@ -510,7 +510,17 @@ and may now be linear, solvable by an isolation axiom, or still delayed.
 
 `wait_linear/3` is the entry point used by `inf/2`, `minimize/1` and
 `bb_inf/3`: it delays the whole optimisation until its expression has become
-linear.
+linear.  A still-delayed optimisation is not a constraint, so it cannot be
+reported inside a `{}/1` term.  `transg//1` reconstructs the user level goal
+that created it (`pending_goal//2`) and `attribute_goals//1` emits it as a
+separate goal, which keeps the answer of `copy_term/3` executable:
+
+```
+?- {Y >= 1, Y =< 5}, minimize(X*Y), copy_term(f(X,Y),C,Gs).
+Gs = [{_A>=1, _A=<5}, clpq:minimize(_A*_B)].
+```
+
+`dump/3` returns only the constraints and drops such goals.
 
 ### 9.3 Isolation axioms
 
@@ -793,16 +803,7 @@ entered: the first clause of `ineq/4` and the first clause of
 
 ### 14.2 Wrong results
 
-* **A pending optimisation leaks into the residual goals.**  When
-  `minimize/1`, `inf/2` or `bb_inf/3` is still waiting for its expression to
-  become linear, `transg//1`'s `wait_linear_retry/3` case emits the solver's
-  own continuation as part of the `{}/1` term, so the answer of
-  `copy_term/3` cannot be executed again:
 
-  ```
-  ?- {Y >= 1, Y =< 5}, minimize(X*Y), copy_term(Y,_,Gs), maplist(call,Gs).
-  ERROR: Type error: `clpq_constraint' expected, found `minimize_lin(_123)'
-  ```
 
 ### 14.3 `ordering/1`
 

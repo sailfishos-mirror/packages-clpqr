@@ -96,6 +96,31 @@ det_call(Goal, Det) :-
     ;   Det = true
     ).
 
+%!  geler_goals(+Var, -Live, -Spent) is det.
+%
+%   Count the delayed non-linear goals attached to Var and how many of
+%   them have already run.  A goal that has run must not stay attached.
+
+geler_goals(V, Live, Spent) :-
+    (   get_attr(V, clpqr_geler, g(_,goals(G),_))
+    ->  count_goals(G, 0-0, Live-Spent)
+    ;   Live = 0,
+        Spent = 0
+    ).
+
+count_goals((A,B), S0, S) :-
+    !,
+    count_goals(A, S0, S1),
+    count_goals(B, S1, S).
+count_goals(run(M,_), L0-S0, L-S) :-
+    !,
+    L is L0+1,
+    (   nonvar(M)
+    ->  S is S0+1
+    ;   S = S0
+    ).
+count_goals(_, S, S).
+
 		 /*******************************
 		 *           SYNTAX		*
 		 *******************************/
@@ -376,6 +401,14 @@ test(residual_shape, true(near(V, 3.0))) :-
 
 :- begin_tests(clpr_nonlinear).
 
+test(spent_goals_are_not_retained, [Live == 4, Spent == 0]) :-
+    % unifying two variables that both carry delayed goals runs those
+    % goals; they must not stay attached to the survivor.  geler.pl said
+    % del_attr(Y,geler) where the attribute is named clpqr_geler, so the
+    % spent goals were never dropped and the conjunction grew as N^2.
+    {A*_ =:= 1}, {B*_ =:= 2}, {C*_ =:= 3}, {D*_ =:= 4},
+    A = B, A = C, A = D,
+    geler_goals(A, Live, Spent).
 test(waking_is_deterministic, [Det == true, true(near(Y, 3.0))]) :-
     % waking a delayed goal used to leave a choice point behind, in
     % geler.pl's run/2 and attr_unify_hook/2 and in nf_r.pl's repair_p/5

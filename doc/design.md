@@ -283,7 +283,11 @@ the open tail of one to the head of the other, concatenates the bases and
 combines the priority graphs.  This makes union-find essentially free.
 
 **`clpqr_geler`** — `g(CLP, goals(Conj), Flag)` holding the delayed non-linear
-goals that mention this variable (§9).
+goals that mention this variable (§9).  `goals(Conj)` becomes `n` when the
+goals have run.  `Flag` is vestigial: it is created as `n` and nothing ever
+sets it to anything else, so the branch in `attr_unify_hook/2` that tests it
+is unreachable.  It is kept because the shape is pattern-matched in several
+places and removing it would buy nothing.
 
 ### 4.4 Variable ordering
 
@@ -920,6 +924,32 @@ residue.
   A sweep of forty scenarios across the whole interface is now deterministic;
   the only choice points left are the genuine second solution of an even
   root, `{X*X =:= 4}`.
+* **Delayed goals that had already run stayed attached.**  When two
+  variables that both carry delayed non-linear goals are unified, the goals
+  of both run and the survivor's attribute is supposed to be cleared — the
+  goals re-attach themselves if they are still non-linear.  `geler.pl` wrote
+
+  ```prolog
+  del_attr(Y, geler)          % the attribute is named clpqr_geler
+  ```
+
+  which deletes an attribute that does not exist, so nothing was ever
+  cleared.  The spent goals stayed attached and `attach/3` prepended the new
+  ones in front of them, so the conjunction grew quadratically in the number
+  of such unifications.  Answers were unaffected — `run/2` skips a goal whose
+  mutex is bound and `trans//1` leaves it out of the residual — but the cost
+  was not:
+
+  | Chained unifications | goals attached, before | after |
+  | --- | --- | --- |
+  | 50 | 1275 | 50 |
+  | 100 | 5050 | 100 |
+  | 200 | 20100 | 200 |
+  | 400 | 80200 (2.4 s) | 400 (0.2 s) |
+
+  This is the one place in the package that used a bare attribute name; every
+  other `get_attr/3`, `put_attr/3` and `del_attr/2` says `clpqr_itf`,
+  `clpqr_class` or `clpqr_geler`.
 * The remaining stylistic oddity is
   `permission_error('mix CLP(Q) variables with','CLP(R) variables:',X)`,
   which spreads the message over the first two arguments of the formal

@@ -57,7 +57,7 @@ attr_unify_hook(g(CLP,goals(Gx),_),Y) :-
 		    B = goals(Gy)
 		->  Later = [Gx,Gy],
 		    (   C = n
-		    ->  del_attr(Y,geler)
+		    ->  del_attr(Y,clpqr_geler)
 		    ;   put_attr(Y,clpqr_geler,g(CLP,n,C))
 		    )
 		;   % no goals in Y, so no mutual goals of X and Y, store

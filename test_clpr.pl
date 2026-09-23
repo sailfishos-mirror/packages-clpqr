@@ -81,6 +81,21 @@ near(X, Y) :-
     NY is Y,
     abs(NX-NY) =< 1.0e-10.
 
+%!  det_call(:Goal, -Det) is semidet.
+%
+%   As call/1, but Det is `true` when Goal left no choice point.  This
+%   is how plunit itself detects nondeterminism; using it in a test turns
+%   what plunit would only warn about into a failure.
+
+:- meta_predicate det_call(0, -).
+
+det_call(Goal, Det) :-
+    call_cleanup(Goal, Det0 = true),
+    (   var(Det0)
+    ->  Det = false
+    ;   Det = true
+    ).
+
 		 /*******************************
 		 *           SYNTAX		*
 		 *******************************/
@@ -361,23 +376,28 @@ test(residual_shape, true(near(V, 3.0))) :-
 
 :- begin_tests(clpr_nonlinear).
 
-test(delayed_product, [nondet, true(near(Y, 3.0))]) :-
+test(waking_is_deterministic, [Det == true, true(near(Y, 3.0))]) :-
+    % waking a delayed goal used to leave a choice point behind, in
+    % geler.pl's run/2 and attr_unify_hook/2 and in nf_r.pl's repair_p/5
+    {X*Y =:= 6},
+    det_call({X =:= 2}, Det).
+test(delayed_product, [true(near(Y, 3.0))]) :-
     {X*Y =:= 6},
     assertion((var(X), var(Y))),
     {X =:= 2}.
-test(delayed_product_other_way, [nondet, true(near(X, 2.0))]) :-
+test(delayed_product_other_way, [true(near(X, 2.0))]) :-
     {X*Y =:= 6},
     {Y =:= 3}.
-test(division_delayed, [nondet, true(near(X, 6.0))]) :-
+test(division_delayed, [true(near(X, 6.0))]) :-
     {X/Y =:= 2},
     {Y =:= 3}.
-test(abs_delayed, [nondet, true(near(X, 4.0))]) :-
+test(abs_delayed, [true(near(X, 4.0))]) :-
     {X =:= abs(Y)},
     {Y =:= -4}.
-test(min_delayed, [nondet, true(near(X, 1.0))]) :-
+test(min_delayed, [true(near(X, 1.0))]) :-
     {X =:= min(Y,3)},
     {Y =:= 1}.
-test(max_delayed, [nondet, true(near(X, 5.0))]) :-
+test(max_delayed, [true(near(X, 5.0))]) :-
     {X =:= max(Y,3)},
     {Y =:= 5}.
 test(invert_sin, true(near(X, 0.0))) :-
@@ -404,13 +424,13 @@ test(root_even, all(Ok == [true,true])) :-
 test(square_is_solved, [nondet, true(near(X, 1.4142135623730951))]) :-
     % unlike CLP(Q), this binds X
     {X*X =:= 2}.
-test(nonlinear_becomes_linear, [nondet, true(near(Z, 1.0))]) :-
+test(nonlinear_becomes_linear, [true(near(Z, 1.0))]) :-
     {Z =:= X*_Y + 1},
     {X =:= 0}.
-test(goal_runs_once, [nondet]) :-
+test(goal_runs_once) :-
     {X*Y =:= 6},
     {X =:= 2, Y =:= 3}.
-test(delayed_inequality, [nondet, true(entailed(Y =< 3))]) :-
+test(delayed_inequality, [true(entailed(Y =< 3))]) :-
     {X*Y =< 6},
     {X =:= 2}.
 test(delayed_inequality_violated, fail) :-
@@ -419,7 +439,7 @@ test(delayed_inequality_violated, fail) :-
 test(delayed_disequation, fail) :-
     {X*Y =\= 6},
     {X =:= 2, Y =:= 3}.
-test(power_of_variable_delayed, [nondet, true(near(Y, 8.0))]) :-
+test(power_of_variable_delayed, [true(near(Y, 8.0))]) :-
     {Y =:= X^3},
     {X =:= 2}.
 
@@ -517,7 +537,7 @@ test(does_not_touch_global_variables, [true(near(I, 1.0)), V == mine]) :-
     inf(X, I),
     nb_getval(inf, V),
     nb_delete(inf).
-test(inf_waits_for_linear, [nondet, true(near(I, 3.0))]) :-
+test(inf_waits_for_linear, [true(near(I, 3.0))]) :-
     {X*Y >= 3},
     {X =:= 1},
     inf(Y, I).
@@ -687,8 +707,7 @@ test(copy_term_is_independent, true(var(X))) :-
 test(copy_term_unconstrained, Gs == []) :-
     copy_term(_, _, Gs).
 test(pending_optimisation_is_reusable,
-     [ nondet
-     , true(near(X2, 1.0))
+     [ true(near(X2, 1.0))
      , true(near(Y2, 1.0))
      ]) :-
     {Y >= 1, Y =< 5},
@@ -863,7 +882,7 @@ test(alias_after_pivoting, true(near(I, 2.0))) :-
 
 % Several delayed goals on one variable.
 
-test(two_delayed_goals, [nondet, true(near(Y, 3.0)), true(near(Z, 6.0))]) :-
+test(two_delayed_goals, [true(near(Y, 3.0)), true(near(Z, 6.0))]) :-
     {X*Y =:= 6},
     {X*Z =:= 12},
     {X =:= 2}.
@@ -875,8 +894,7 @@ test(unrelated_stores_are_reported_separately, true(Gs = [{_},{_}])) :-
     {A + B =:= 1},
     copy_term(f(X,Y,A,B), _, Gs).
 test(alias_across_delayed_goals,
-     [ nondet
-     , true(near(Y, 3.0))
+     [ true(near(Y, 3.0))
      , true(near(W, 4.0))
      ]) :-
     {X*Y =:= 6},
@@ -927,7 +945,7 @@ test(nonlinear_lt_delayed, true((var(X),var(Y)))) :-
     {X*Y < 0}.
 test(nonlinear_le_delayed, true(var(X))) :-
     {X*_Y =< 0}.
-test(nonlinear_lt_woken, [nondet, true(C = [y < _])]) :-
+test(nonlinear_lt_woken, [true(C = [y < _])]) :-
     {X*Y < 6},
     {X =:= 2},
     dump([Y], [y], C).
@@ -953,30 +971,29 @@ test(residual_nested_function, true(C = [x - sin(_+y) = _])) :-
 % Optimisation of an expression that is not yet linear waits.
 
 test(minimize_waits_for_linear,
-     [ nondet
-     , true(near(X, 1.0))
+     [ true(near(X, 1.0))
      , true(near(Y, 1.0))
      ]) :-
     {Y >= 1, Y =< 5},
     minimize(X*Y),
     {X =:= 1}.
-test(inf_of_nonlinear_waits, [nondet, true(near(I, 1.0))]) :-
+test(inf_of_nonlinear_waits, [true(near(I, 1.0))]) :-
     {Y >= 1, Y =< 5},
     inf(X*Y, I),
     {X =:= 1}.
 
 % Division by a non-constant.
 
-test(division_by_expression, [nondet, true(near(X, 0.5))]) :-
+test(division_by_expression, [true(near(X, 0.5))]) :-
     {X =:= 1/(Y+1)},
     {Y =:= 1}.
 
 % Wide expressions take the recursive branches of the logarithmic helpers.
 
-test(wide_product, [nondet, true(near(Z, 25.0))]) :-
+test(wide_product, [true(near(Z, 25.0))]) :-
     {Z =:= (A+B+C+D+E)*(A+B+C+D+E)},
     {A =:= 1, B =:= 1, C =:= 1, D =:= 1, E =:= 1}.
-test(wide_repair, [nondet, true(near(Z, 44.0))]) :-
+test(wide_repair, [true(near(Z, 44.0))]) :-
     {Z =:= A*B + C*D + E*F},
     {A =:= 1, B =:= 2, C =:= 3, D =:= 4, E =:= 5, F =:= 6}.
 test(entailed_disequation) :-
@@ -1007,7 +1024,7 @@ test(mix_detected_in_inequality, error(permission_error(_,_,_))) :-
     {X < 0}.
 test(exponent_cancellation, true(near(Y, 1.0))) :-
     {Y =:= X * (1/X)}.
-test(optimisation_redelayed, [nondet, true(var(Z))]) :-
+test(optimisation_redelayed, [true(var(Z))]) :-
     {X*Y*Z >= 1},
     minimize(X*Y*Z),
     {X =:= 1}.
@@ -1101,8 +1118,7 @@ test(ordering_manual_plain,
     dump([P,B,Mp], [p,b,mp], C),
     C = [b = Cp*p - Cm*mp].
 test(ordering_manual_mp,
-     [ nondet
-     , true(near(Cb, -0.0788487886783417))
+     [ true(near(Cb, -0.0788487886783417))
      , true(near(Cp, 0.08884878867834171))
      ]) :-
     % "instead of B, you want Mp to be the defined variable":
@@ -1187,9 +1203,5 @@ test(nonvar_binding, C == []) :-
 
 test(division_by_zero_does_not_raise, fail) :-
     {_ =:= 1/0}.
-
-test(waking_leaves_choicepoint, [nondet, true(near(Y, 3.0))]) :-
-    {X*Y =:= 6},
-    {X =:= 2}.
 
 :- end_tests(clpr_known_issues).

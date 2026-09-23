@@ -99,10 +99,9 @@ ordering(CLP,Pb) :-
 	join_class(CLP,Pb,Class),
 	class_get_prio(Class,Ga),
 	!,
-	(   Xs = [],
-	    add_vertices([],Pb,Gb)
-	;   Xs=[_|_],
-	    gen_edges(Pb,Es,[]),
+	(   Xs == []
+	->  add_vertices([],Pb,Gb)
+	;   gen_edges(Pb,Es,[]),
 	    add_edges([],Es,Gb)
 	),
 	combine(Ga,Gb,Gc),

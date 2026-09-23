@@ -69,6 +69,21 @@ test_clpq :-
                 clpq_known_issues
               ]).
 
+%!  det_call(:Goal, -Det) is semidet.
+%
+%   As call/1, but Det is `true` when Goal left no choice point.  This
+%   is how plunit itself detects nondeterminism; using it in a test turns
+%   what plunit would only warn about into a failure.
+
+:- meta_predicate det_call(0, -).
+
+det_call(Goal, Det) :-
+    call_cleanup(Goal, Det0 = true),
+    (   var(Det0)
+    ->  Det = false
+    ;   Det = true
+    ).
+
 		 /*******************************
 		 *           SYNTAX		*
 		 *******************************/
@@ -334,11 +349,16 @@ test(residual_shape, C == [x =\= 3]) :-
 
 :- begin_tests(clpq_nonlinear).
 
-test(delayed_product, [nondet, Y == 3]) :-
+test(waking_is_deterministic, [Det == true, Y == 3]) :-
+    % waking a delayed goal used to leave a choice point behind, in
+    % geler.pl's run/2 and attr_unify_hook/2 and in nf_q.pl's repair_p/5
+    {X*Y =:= 6},
+    det_call({X =:= 2}, Det).
+test(delayed_product, [Y == 3]) :-
     {X*Y =:= 6},
     assertion((var(X), var(Y))),
     {X =:= 2}.
-test(delayed_product_other_way, [nondet, X == 2]) :-
+test(delayed_product_other_way, [X == 2]) :-
     {X*Y =:= 6},
     {Y =:= 3}.
 test(square_root, all(X == [2,-2])) :-
@@ -370,16 +390,16 @@ test(reciprocal_is_never_zero, fail) :-
 test(root_after_waking, all(X == [2,-2])) :-
     % the power is resolved when the right hand side becomes known
     {X^2 =:= Y}, {Y =:= 4}.
-test(division_delayed, [nondet, X == 6]) :-
+test(division_delayed, [X == 6]) :-
     {X/Y =:= 2},
     {Y =:= 3}.
-test(abs_delayed, [nondet, X == 4]) :-
+test(abs_delayed, [X == 4]) :-
     {X =:= abs(Y)},
     {Y =:= -4}.
-test(min_delayed, [nondet, X == 1]) :-
+test(min_delayed, [X == 1]) :-
     {X =:= min(Y,3)},
     {Y =:= 1}.
-test(max_delayed, [nondet, X == 5]) :-
+test(max_delayed, [X == 5]) :-
     {X =:= max(Y,3)},
     {Y =:= 5}.
 test(invert_sin, X == 0) :-
@@ -414,14 +434,14 @@ test(invert_exp_exponent,
      ]) :-
     % the other branch of nl_invertible/4: X and Z ground in X = Y^Z
     {8 =:= Y^2.5}.
-test(nonlinear_becomes_linear, [nondet, Z == 1]) :-
+test(nonlinear_becomes_linear, [Z == 1]) :-
     {Z =:= X*_Y + 1},
     {X =:= 0}.
-test(goal_runs_once, [nondet]) :-
+test(goal_runs_once) :-
     % X and Y in one delayed goal; binding both must not run it twice
     {X*Y =:= 6},
     {X =:= 2, Y =:= 3}.
-test(delayed_inequality, [nondet, true(entailed(Y =< 3))]) :-
+test(delayed_inequality, [true(entailed(Y =< 3))]) :-
     {X*Y =< 6},
     {X =:= 2}.
 test(delayed_inequality_violated, fail) :-
@@ -430,7 +450,7 @@ test(delayed_inequality_violated, fail) :-
 test(delayed_disequation, fail) :-
     {X*Y =\= 6},
     {X =:= 2, Y =:= 3}.
-test(power_of_variable_delayed, [nondet, Y == 8]) :-
+test(power_of_variable_delayed, [Y == 8]) :-
     {Y =:= X^3},
     {X =:= 2}.
 
@@ -544,7 +564,7 @@ test(does_not_touch_global_variables, [I == 1, S == 5, V == mine]) :-
     sup(X, S),
     nb_getval(inf, V),
     nb_delete(inf).
-test(inf_waits_for_linear, [nondet, I == 3]) :-
+test(inf_waits_for_linear, [I == 3]) :-
     {X*Y >= 3},
     {X =:= 1},
     inf(Y, I).
@@ -742,7 +762,7 @@ test(copy_term_unconstrained, Gs == []) :-
 test(copy_term_equation, true(Gs = [{_}])) :-
     {X + Y =:= 1},
     copy_term(X-Y, _, Gs).
-test(pending_optimisation_is_reusable, [nondet, X2 == 1, Y2 == 1]) :-
+test(pending_optimisation_is_reusable, [X2 == 1, Y2 == 1]) :-
     % a minimize/1 that is still waiting for its expression to become
     % linear is reported as the user level goal that created it, so the
     % answer of copy_term/3 can be executed again
@@ -1020,7 +1040,7 @@ test(alias_after_pivoting, I == 2) :-
 % Several delayed goals on one variable exercise the conjunction cases of
 % geler.pl's trans//1 and transg//1.
 
-test(two_delayed_goals, [nondet, Y == 3, Z == 6]) :-
+test(two_delayed_goals, [Y == 3, Z == 6]) :-
     {X*Y =:= 6},
     {X*Z =:= 12},
     {X =:= 2}.
@@ -1044,7 +1064,7 @@ test(alias_delayed_variables, all(X == [2,-2])) :-
 test(alias_delayed_variables_irrational, fail) :-
     {X*Y =:= 6},
     X = Y.
-test(alias_across_delayed_goals, [nondet, Y == 3, W == 4]) :-
+test(alias_across_delayed_goals, [Y == 3, W == 4]) :-
     {X*Y =:= 6},
     {Z*W =:= 12},
     Y = Z,
@@ -1096,7 +1116,7 @@ test(nonlinear_le_delayed, true(var(X))) :-
     {X*_Y =< 0}.
 test(nonlinear_eq_zero_delayed, true(var(X))) :-
     {X*_Y =:= 0}.
-test(nonlinear_lt_woken, [nondet, C == [y < 3]]) :-
+test(nonlinear_lt_woken, [C == [y < 3]]) :-
     {X*Y < 6},
     {X =:= 2},
     dump([Y], [y], C).
@@ -1125,11 +1145,11 @@ test(residual_nested_function, C == [x - sin(1+y) = 0]) :-
 % Optimisation of an expression that is not yet linear waits
 % (wait_linear_retry/3).
 
-test(minimize_waits_for_linear, [nondet, X == 1, Y == 1]) :-
+test(minimize_waits_for_linear, [X == 1, Y == 1]) :-
     {Y >= 1, Y =< 5},
     minimize(X*Y),
     {X =:= 1}.
-test(inf_of_nonlinear_waits, [nondet, I == 1]) :-
+test(inf_of_nonlinear_waits, [I == 1]) :-
     {Y >= 1, Y =< 5},
     inf(X*Y, I),
     {X =:= 1}.
@@ -1137,17 +1157,17 @@ test(inf_of_nonlinear_waits, [nondet, I == 1]) :-
 % Division by a non-constant stays as an undigested quotient until the
 % divisor is known (nf_div/3 third clause, repair_p_one/2).
 
-test(division_by_expression, [nondet, X == 1r2]) :-
+test(division_by_expression, [X == 1r2]) :-
     {X =:= 1/(Y+1)},
     {Y =:= 1}.
 
 % Wide expressions take the recursive (N>2) branches of the logarithmic
 % helpers nf_mul_log/6, nf_mul_factor_log/5, repair_log/4, repair_p_log/6.
 
-test(wide_product, [nondet, Z == 25]) :-
+test(wide_product, [Z == 25]) :-
     {Z =:= (A+B+C+D+E)*(A+B+C+D+E)},
     {A =:= 1, B =:= 1, C =:= 1, D =:= 1, E =:= 1}.
-test(wide_repair, [nondet, Z == 44]) :-
+test(wide_repair, [Z == 44]) :-
     {Z =:= A*B + C*D + E*F},
     {A =:= 1, B =:= 2, C =:= 3, D =:= 4, E =:= 5, F =:= 6}.
 test(entailed_disequation) :-
@@ -1195,7 +1215,7 @@ test(mix_detected_in_inequality_lower, error(permission_error(_,_,_))) :-
 test(exponent_cancellation, Y == 1) :-
     % X^1 * X^-1 cancels in pmerge_case/9
     {Y =:= X * (1/X)}.
-test(optimisation_redelayed, [nondet, true(var(Z))]) :-
+test(optimisation_redelayed, [true(var(Z))]) :-
     % the expression is still non-linear when the delayed goal wakes, so
     % wait_linear_retry/3 has to delay it again
     {X*Y*Z >= 1},
@@ -1265,13 +1285,6 @@ test(nonvar_binding, C == []) :-
 
 % See doc/design.md, section 14.  These tests pin down *wrong* behaviour so
 % that fixing it is noticed.  Each says what the right answer would be.
-
-test(waking_leaves_choicepoint, [nondet, Y == 3]) :-
-    % geler.pl's attr_unify_hook/2 has a catch-all second clause, and
-    % run/2 has two clauses, so waking a delayed goal always leaves a
-    % choice point even when the wake-up is deterministic.
-    {X*Y =:= 6},
-    {X =:= 2}.
 
 test(division_by_zero_does_not_raise, fail) :-
     % zero_division/0 is `fail' with the comment `% raise_exception(_) ?'.

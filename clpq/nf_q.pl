@@ -1018,12 +1018,15 @@ repair_p_log(N,P0,P2,R,L0,L2) :-
 	repair_p_log(Q,P1,P2,Rq,L1,L2),
 	pmerge(Rp,Rq,R).
 
-repair_p(Term,P,[Term^P],L0,L0) :- var(Term).
-repair_p(Term,P,[],L0,L1) :-
-	nonvar(Term),
-	repair_p_one(Term,TermN),
-	nf_power(P,TermN,TermNP),
-	nf_mul(TermNP,L0,L1).
+repair_p(Term,P,R,L0,L1) :-
+	(   var(Term)
+	->  R = [Term^P],
+	    L1 = L0
+	;   R = [],
+	    repair_p_one(Term,TermN),
+	    nf_power(P,TermN,TermNP),
+	    nf_mul(TermNP,L0,L1)
+	).
 %
 % An undigested term a/b is distinguished from an
 % digested one by the fact that its arguments are
@@ -1134,13 +1137,12 @@ exp2term(P,X,Term) :-
 	Term = X^P.
 
 pe2term(X,Term) :-
-	var(X),
-	Term = X.
-pe2term(X,Term) :-
-	nonvar(X),
-	X =.. [F|Args],
-	pe2term_args(Args,Argst),
-	Term =.. [F|Argst].
+	(   var(X)
+	->  Term = X
+	;   X =.. [F|Args],
+	    pe2term_args(Args,Argst),
+	    Term =.. [F|Argst]
+	).
 
 pe2term_args([],[]).
 pe2term_args([A|As],[T|Ts]) :-

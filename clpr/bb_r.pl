@@ -129,11 +129,10 @@ bb_loop(Opt,Is,Eps,State) :-
 % different optimum. The added inequalities may also have led to binding.
 
 bb_reoptimize(Obj,Inf) :-
-	var(Obj),
-	iterate_dec(Obj,Inf).
-bb_reoptimize(Obj,Inf) :-
-	nonvar(Obj),
-	Inf = Obj.
+	(   var(Obj)
+	->  iterate_dec(Obj,Inf)
+	;   Inf = Obj
+	).
 
 % bb_better_bound(State,Inf)
 %

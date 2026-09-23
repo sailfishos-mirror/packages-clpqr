@@ -47,8 +47,8 @@
 
 attr_unify_hook(g(CLP,goals(Gx),_),Y) :-
 	!,
-	(   var(Y),
-	    (   get_attr(Y,clpqr_geler,g(A,B,C))
+	(   var(Y)
+	->  (   get_attr(Y,clpqr_geler,g(A,B,C))
 	    ->  ignore((CLP \== A,throw(error(permission_error(
 		    'apply CLP(Q) constraints on','CLP(R) variable',Y),
 		    context(_,_))))),
@@ -69,8 +69,7 @@ attr_unify_hook(g(CLP,goals(Gx),_),Y) :-
 	    ;	Later = [],
 		put_attr(Y,clpqr_geler,g(CLP,goals(Gx),n))
 	    )
-	;   nonvar(Y),
-	    Later = [Gx]
+	;   Later = [Gx]
 	),
 	maplist(call,Later).
 attr_unify_hook(_,_). % no goals in X
@@ -127,11 +126,12 @@ transg(G) --> [G].
 % that when X = Y and X and Y are in the same goal, that goal
 % is called only once.
 
-run(Mutex,_) :- nonvar(Mutex).
 run(Mutex,G) :-
-	var(Mutex),
-	Mutex = done,
-	call(G).
+	(   var(Mutex)
+	->  Mutex = done,
+	    call(G)
+	;   true
+	).
 
 % geler(Vars,Goal)
 %

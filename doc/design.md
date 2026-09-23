@@ -900,6 +900,26 @@ residue.
   now raise proper errors — `instantiation_error`, `type_error(var, T)` and
   `cyclic_ordering(Spec)` respectively — and Q and R agree on which.
   `context(_)` in 22 throws was corrected to `context(_,_)`.
+* **Every solver call used to leave a choice point.**  Not one of `{}/1`,
+  `inf/2`, `minimize/1`, `bb_inf/3`, `dump/3`, `entailed/1` or a plain
+  unification was deterministic, so a program using CLP(Q,R) accumulated
+  choice points it could never use and could not be last-call optimised.
+  Four places leaked, each the same idiom — two clauses distinguished by a
+  test that the first clause does not commit to, or a disjunction where an
+  if-then-else was meant:
+
+  | Predicate | File |
+  | --- | --- |
+  | `run/2` | `clpqr/geler.pl` |
+  | `attr_unify_hook/2`, on `var(Y)` | `clpqr/geler.pl` |
+  | `repair_p/5` | `nf_*.pl` |
+  | `ordering/2`, on a one-element list | `clpqr/ordering.pl` |
+
+  The same idiom in `bb_reoptimize/2`, `renormalize_log_one/3` and
+  `pe2term/2` was latent rather than proven to leak, and was converted too.
+  A sweep of forty scenarios across the whole interface is now deterministic;
+  the only choice points left are the genuine second solution of an even
+  root, `{X*X =:= 4}`.
 * The remaining stylistic oddity is
   `permission_error('mix CLP(Q) variables with','CLP(R) variables:',X)`,
   which spreads the message over the first two arguments of the formal
@@ -927,11 +947,6 @@ the interface rather than a repair:
   module**, since they export the same names.  The manual's "It is allowed to
   use both libraries in one program" is true only with explicit module
   qualification.
-* **Waking a delayed goal always leaves a choice point**, because
-  `clpqr/geler.pl`'s `attr_unify_hook/2` has a catch-all second clause and
-  `run/2` has two clauses.  Roughly a tenth of the tests carry `[nondet]`
-  because of it.  Cutting where the wake-up is deterministic would be a
-  performance fix, not a correctness one.
 
 
 ## 15. Testing
@@ -1232,8 +1247,13 @@ the two optimisers hide the same defect from each other.
 * In CLP(R), compare with a tolerance (`near/2` in `test_clpr.pl`), never
   `==`.  `{X =:= 3}` gives `3.0`, and `1/3` is not `0.3333333333333333` under
   `==`.
-* Expect choice points (see §14.6); mark those tests `[nondet]` rather than
-  adding cuts to the solver.
+* The solver is deterministic, so a test that needs `[nondet]` is a finding,
+  not a formality: the only legitimate case is the two roots of an even
+  power.  plunit only *warns* about an unexpected choice point, so where the
+  determinism is the point of the test, check it with `det_call/2` (in both
+  suites) and put `Det == true` in the head — that turns the warning into a
+  failure.  The `*` answer at the toplevel, or `A` in the debugger, names
+  the clause that left the choice point.
 * `_X` used twice in one clause draws a "singleton-marked variable appears
   more than once" warning.  Use a normal name; two occurrences are not a
   singleton.

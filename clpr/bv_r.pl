@@ -70,6 +70,7 @@
 	    unconstrained/4,
 	    var_intern/2,
 	    var_intern/3,
+	    var_intern/4,
 	    var_with_def_assign/2,
 	    var_with_def_intern/4,
 	    maximize/1,
@@ -238,10 +239,15 @@ var_with_def_assign(Var,Lin) :-
 % Makes Lin the linear equation of new variable Var, makes all variables of
 % Lin, and Var of the same class and bounds Var by type(Type) and
 % strictness(Strictness)
+%
+% Var is always a variable the solver invents for itself: a slack variable,
+% the target of an optimisation or the witness of a disequation.  It is
+% therefore marked auxiliary (argument 7), so that projection can eliminate
+% it again rather than report it as part of an answer.
 
 var_with_def_intern(Type,Var,Lin,Strict) :-
 	put_attr(Var,clpqr_itf,t(clpr,type(Type),strictness(Strict),lin(Lin),
-	    order(_),n,n,n,n,n,n)),	% check uses
+	    order(_),n,aux,n,n,n,n)),	% check uses
 	Lin = [_,_|Hom],
 	get_or_add_class(Var,Class),
 	same_class(Hom,Class).
@@ -251,8 +257,17 @@ var_with_def_intern(Type,Var,Lin,Strict) :-
 %
 
 var_intern(Type,Var,Strict) :-
+	var_intern(Type,Var,Strict,n).
+
+% var_intern(Type,Var,Strictness,Aux)
+%
+% As var_intern/3.  Aux is aux if Var is a slack variable introduced by the
+% solver and n if it is a variable the user wrote down; see
+% var_with_def_intern/4.
+
+var_intern(Type,Var,Strict,Aux) :-
 	put_attr(Var,clpqr_itf,t(clpr,type(Type),strictness(Strict),
-	    lin([0.0,0.0,l(Var*1.0,Ord)]),order(Ord),n,n,n,n,n,n)),
+	    lin([0.0,0.0,l(Var*1.0,Ord)]),order(Ord),n,Aux,n,n,n,n)),
 	get_or_add_class(Var,_Class).
 
 % TODO

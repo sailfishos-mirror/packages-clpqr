@@ -725,6 +725,30 @@ conjunction is not emitted once per variable.  Both have to go, because a
 variable that carries only a delayed non-linear goal has no `clpqr_itf`
 attribute at all.
 
+The set it projects *onto* is not the same as the set it reports *for*.
+`user_vars/2` drops the variables the solver invented for itself — the slack
+variables of `ineq_more/2`, the objective of `minimize/1`, the witness of a
+disequation — all of which are marked `aux` in argument 7 of the
+`clpqr_itf` record at the point where they are created
+(`var_with_def_intern/4` and `var_intern/4` in `bv_*.pl`).  Those variables
+are then eliminated by the ordinary Fourier–Motzkin machinery, which is what
+turns the raw tableau back into the constraints the user wrote down.  The
+attributes are still deleted from *all* of the variables, targets and
+internals alike, since every one of them has now been accounted for.
+
+The mark is deliberately put on the solver's own variables rather than on the
+user's.  Missing a mark leaves an internal variable in the answer — ugly, but
+correct.  Marking a user variable by mistake would project a real constraint
+away and produce an answer that is too weak.
+
+What this *cannot* do is project onto the term that was copied.
+`term_attvars/2` walks through attributes, so the variable set SWI-Prolog
+hands to `attribute_goals//1` is already the whole connected component, no
+matter how little of it the copied term mentions.  `copy_term(X, C, Gs)` on
+`{X+Y >= 1}` therefore still reports `{C + _ >= 1}` with a fresh variable for
+`Y`, where `dump([X],[x],L)` gives `L = []`.  Code that needs a projection
+onto specific variables has to call `dump/3`.
+
 
 ## 13. CLP(Q) versus CLP(R)
 
@@ -955,7 +979,20 @@ residue.
   which spreads the message over the first two arguments of the formal
   term.  It prints correctly, so it is left alone.
 
-### 14.6 Still open
+### 14.6 Internal variables in answers
+
+`{X+Y >= 1}` used to print as `{Y=1-X+_A, _A>=0}`, and `copy_term/3` returned
+the same thing: the content of the tableau, slack variables and all.  The
+cause was that `attribute_goals//1` projected onto *every* attributed variable
+it could reach, so there was nothing left for the projection to eliminate and
+`dump/3` ran as an expensive identity.  `dump/3` itself was unaffected,
+because its caller states the targets; the same store dumps as `[x+y>=1]`.
+
+The repair is the `aux` mark of §12.5.  It costs what projection costs: on a
+chain of 80 `{A =< B}` constraints, `copy_term/3` went from 2 ms to 12 ms,
+which is the price `dump/3` was already paying.
+
+### 14.7 Still open
 
 These are left alone deliberately, because fixing them is a decision about
 the interface rather than a repair:
@@ -970,9 +1007,10 @@ the interface rather than a repair:
   `uninstantiation_error(1)`, although `X` is exactly the kind of variable a
   user would want to dump.  What it should return instead (`[y = 1]`?
   `[]`?) is an interface decision.
-* **Answers can mention fresh slack variables.**  `{X+Y >= 1}` prints
-  `{Y=1-X+_A, _A>=0}`.  This is inherent to how `ineq_more/2` introduces
-  slack variables and is documented in the SWI-Prolog manual.
+* **`copy_term/3` does not project onto the copied term.**  It projects onto
+  the user-level variables of the term's connected component, which is the
+  most the `attribute_goals//1` interface allows; see §12.5.  Getting the
+  projection onto a chosen list of variables requires `dump/3`.
 * **`library(clpq)` and `library(clpr)` cannot both be imported into one
   module**, since they export the same names.  The manual's "It is allowed to
   use both libraries in one program" is true only with explicit module

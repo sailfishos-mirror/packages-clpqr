@@ -37,6 +37,7 @@
           ]).
 :- use_module(library(plunit)).
 :- use_module(library(lists)).
+:- use_module(library(ordsets)).
 :- use_module(library(clpr)).
 :- use_module(library(clpq), []).          % for the solver-mixing tests
 
@@ -739,6 +740,44 @@ test(copy_term_is_independent, true(var(X))) :-
     {Y =:= 2}.
 test(copy_term_unconstrained, Gs == []) :-
     copy_term(_, _, Gs).
+test(copy_term_projects_slack_away, Gs = [{A+B>=1.0}]) :-
+    % the slack variable that ineq_more/2 introduces for an inequality
+    % over unbounded variables is projected away again
+    {X + Y >= 1},
+    copy_term(f(X,Y), f(A,B), Gs).
+test(copy_term_projects_bounded_slack_away, Extra == []) :-
+    % the other branch of ineq_more/2: every variable already has a bound
+    {X >= 0, Y >= 0, X + Y >= 1},
+    copy_term(f(X,Y), Copy, Gs),
+    extra_vars(Gs, Copy, Extra).
+test(copy_term_projects_strict_slack_away, Extra == []) :-
+    {X >= 0, Y >= 0, X + Y > 1},
+    copy_term(f(X,Y), Copy, Gs),
+    extra_vars(Gs, Copy, Extra).
+test(copy_term_chain_has_no_slack, Extra == []) :-
+    {A =< B, B =< C},
+    copy_term(f(A,B,C), Copy, Gs),
+    extra_vars(Gs, Copy, Extra).
+test(copy_term_disequation, Gs = [{A+B=\=1.0}]) :-
+    {X + Y =\= 1},
+    copy_term(f(X,Y), f(A,B), Gs).
+test(copy_term_nonlinear_has_no_slack, Extra == []) :-
+    % the delayed goal of the non-linear part must not drag the slack
+    % variable of the linear part back into the answer
+    {X * Y =:= Z, X + Y >= 1},
+    copy_term(f(X,Y,Z), Copy, Gs),
+    extra_vars(Gs, Copy, Extra).
+test(copy_term_optimisation_has_no_slack, Extra == []) :-
+    % minimize/1 introduces a variable of its own for the objective
+    {X >= 1, Y >= 1, X + Y >= 3},
+    minimize(X+Y),
+    copy_term(f(X,Y), Copy, Gs),
+    extra_vars(Gs, Copy, Extra).
+test(copy_term_pending_optimisation_has_no_slack, Extra == []) :-
+    {Y >= 1, Y =< 5},
+    minimize(X*Y),
+    copy_term(f(X,Y), Copy, Gs),
+    extra_vars(Gs, Copy, Extra).
 test(pending_optimisation_is_reusable,
      [ true(near(X2, 1.0))
      , true(near(Y2, 1.0))
@@ -760,6 +799,19 @@ test(residual_is_reusable, [true(near(I,1.0)), true(near(S,3.0))]) :-
     inf(Y, I), sup(Y, S).
 
 :- end_tests(clpr_residuals).
+
+% extra_vars(+Goals, +Copy, -Extra)
+%
+% Extra are the variables of Goals that do not occur in Copy.  A residual
+% that mentions a variable the caller cannot see is a slack variable (or
+% another solver internal) that projection failed to eliminate.
+
+extra_vars(Goals, Copy, Extra) :-
+    term_variables(Goals, GVs),
+    term_variables(Copy, CVs),
+    sort(GVs, GSet),
+    sort(CVs, CSet),
+    ord_subtract(GSet, CSet, Extra).
 
 		 /*******************************
 		 *        UNIFICATION		*

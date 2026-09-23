@@ -69,6 +69,7 @@
 	    ub/3,
 	    unconstrained/4,
 	    var_intern/3,
+	    var_intern/4,
 	    var_with_def_intern/4
 	]).
 :- use_module(store_r,
@@ -437,7 +438,7 @@ ineq_more(strict,Lind) :-
 	(   unconstrained(Lind,U,K,Rest)
 	->  % never fails, no implied value
 	    % Lind < 0 => Rest < -K*U where U has no bounds
-	    var_intern(t_l(0.0),S,2),	% create slack variable S
+	    var_intern(t_l(0.0),S,2,aux),	% create slack variable S
 	    get_attr(S,clpqr_itf,AttS),
 	    arg(5,AttS,order(OrdS)),
 	    Ki is -1.0/K,
@@ -458,7 +459,7 @@ ineq_more(nonstrict,Lind) :-
 	(   unconstrained(Lind,U,K,Rest)
 	->  % never fails, no implied value
 	    % Lind =< 0 => Rest =< -K*U where U has no bounds
-	    var_intern(t_l(0.0),S,0),	% create slack variable S
+	    var_intern(t_l(0.0),S,0,aux),	% create slack variable S
 	    Ki is -1.0/K,
 	    get_attr(S,clpqr_itf,AttS),
 	    arg(5,AttS,order(OrdS)),

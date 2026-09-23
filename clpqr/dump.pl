@@ -186,15 +186,40 @@ all_attribute_goals([V|Vs]) -->
 clpqr_itf:attribute_goals(V) -->
 	(   { term_attvars(V, Vs),
 	      Vs \== [],
-	      copy_term_clpq(Vs, NVs, List, Pending),
+	      user_vars(Vs, Target),
+	      Target \== [],
+	      copy_term_clpq(Target, NTarget, List, Pending),
 	      ( List \== [] ; Pending \== [] ),
-	      NVs = Vs,
+	      NTarget = Target,
 	      del_solver_atts(Vs)
 	    }
 	->  constraint_goal(List),
 	      Pending			% delayed optimisations, see above
 	;   []
 	).
+
+% user_vars(+Vars, -Target)
+%
+% Target are the variables of Vars that the user can actually see, i.e.
+% all but the ones the solver introduced for itself (see
+% var_with_def_intern/4 in bv_q.pl).  Projecting onto Target rather than
+% onto Vars is what turns the raw content of the tableau, slack variables
+% and all, into the constraints the user wrote down.
+%
+% term_attvars/2 walks through attributes, so Vars is the whole connected
+% component regardless of how little of it the copied term mentions.  The
+% answer is therefore not projected onto that term; it is projected onto
+% the user-level variables of its component, which is the most that this
+% interface allows.
+
+user_vars([], []).
+user_vars([V|Vs], Target) :-
+	(   get_attr(V, clpqr_itf, Att),
+	    arg(7, Att, aux)
+	->  Target = Target1
+	;   Target = [V|Target1]
+	),
+	user_vars(Vs, Target1).
 
 constraint_goal([]) --> !.
 constraint_goal(List) -->
